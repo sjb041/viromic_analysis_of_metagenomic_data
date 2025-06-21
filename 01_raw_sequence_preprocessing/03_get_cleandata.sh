@@ -1,7 +1,7 @@
-mkdir 03_cleandata
+mkdir -p 03_cleandata
 
-# 获取样本名
-sample=$(ls 02_quality_control_rawdata)
+# 样本名
+sample="F1.1A F1.2A F1.3A F2.1A F2.2A F2.3A FG.1A FG.2A FG.3A L1.1A L1.2A L1.3A L2.1A L2.2A L2.3A H.LX H.O"
 
 # 提取 cleandata ，文件重命名，压缩
 for i in $sample
