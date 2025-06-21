@@ -6,9 +6,10 @@ CONDA_BASE=$(conda info --base)
 # 加载Conda基础配置
 source "$CONDA_BASE/etc/profile.d/conda.sh"
 
-# 获取评估报告
-sample=$(ls 02_quality_control_rawdata)
+# 样本名
+sample="F1.1A F1.2A F1.3A F2.1A F2.2A F2.3A FG.1A FG.2A FG.3A L1.1A L1.2A L1.3A L2.1A L2.2A L2.3A H.LX H.O"
 
+# 获取评估报告
 for i in $sample
 do
     mv 02_quality_control_rawdata/${i}/fastqc/${i}_L1_1_kneaddata_paired* 04_quality_assessment_cleandata/fastqc_paired/ &
