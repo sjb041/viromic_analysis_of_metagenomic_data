@@ -29,7 +29,6 @@ do
 		--trimmomatic-options 'ILLUMINACLIP:$HOME/miniconda3/envs/kd0.7.4/share/trimmomatic/adapters/TruSeq3-PE.fa:2:40:15 SLIDINGWINDOW:4:20 MINLEN:50' \
 		--bowtie2-options '--end-to-end --sensitive --reorder' \
 		--remove-intermediate-output \
-		--run-fastqc-end \
 		-t 30
 
 	kneaddata_read_count_table --input ${outdir} --output ${outdir}/sum.tsv
