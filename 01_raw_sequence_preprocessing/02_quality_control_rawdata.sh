@@ -1,3 +1,12 @@
+## 使用 kneaddata 0.7.4 版本，miniconda3 安装
+## 需要自行构建参考基因组 hg_38_p14，修改“db_path”到自己的数据库位置
+
+## wget https://ftp.ncbi.nlm.nih.gov/genomes/all/GCA/000/001/405/GCA_000001405.29_GRCh38.p14/GCA_000001405.29_GRCh38.p14_genomic.fna.gz
+## gunzip GCA_000001405.29_GRCh38.p14_genomic.fna.gz
+## conda activate kd0.7.4
+## bowtie2-build GCA_000001405.29_GRCh38.p14_genomic.fna $HOME/db/kneaddata_db/hg_38_p14 --threads 16
+############################################################################################
+
 mkdir -p 02_quality_control_rawdata
 
 # 动态获取Conda路径
