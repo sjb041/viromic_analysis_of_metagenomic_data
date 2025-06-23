@@ -22,7 +22,7 @@ for i in ${sample[@]}
 do
     # 筛选出符合的 contigID
     awk '$3 > 0.9 && $4 < 0.01 {print $1}' ${out}/${i}_contigs.fasta_gt1500bp_dvfpred.txt > ${out}/${i}.txt
- 	awk '$3 > 0.9 && $4 < 0.01 {print $1}' ${out_addS}/${i}_contigs.fasta_gt1500bp_dvfpred.txt > ${out_addS}/${i}.txt
+    awk '$3 > 0.9 && $4 < 0.01 {print $1}' ${out_addS}/${i}_contigs.fasta_gt1500bp_dvfpred.txt > ${out_addS}/${i}.txt
     
     # 提取contigs
     seqkit grep -f ${out}/${i}.txt ${contigspath}/${i}_contigs.fasta > ${out}/${i}_vir.fasta
