@@ -20,7 +20,7 @@ conda activate vs1
 wrapper_phage_contigs_sorter_iPlant.pl -f contigs_test9.fasta --db 1 --wdir vs1 --ncpu 16 --data-dir $HOME/db/vs1_db/virsorter-data
 
 
-################################## vs1
+################################## vs2
 conda activate vs2
 
 # 增加 hmmsearch 的线程数，默认是2
