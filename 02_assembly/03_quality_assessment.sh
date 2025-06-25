@@ -16,7 +16,8 @@ do
     r2="../01_raw_sequence_preprocessing/03_cleandata/${i}_R2.fastq.gz"
     out="03_quality_assessment/${i}"
 
-    metaquast.py 02_contigs/${i}_contigs.fasta --pe1 ${r1} --pe2 ${r2} --max-ref-number 0 -t 30 -o ${out} \
+    #metaquast.py 02_contigs/${i}_contigs.fasta --pe1 ${r1} --pe2 ${r2} --max-ref-number 0 -t 30 -o ${out} --contig-thresholds 0,500,1000,1500,2000,2200,3000,3500,4000,5000,10000,25000,50000
+    metaquast.py 02_contigs/${i}_contigs.fasta --max-ref-number 0 -t 30 -o ${out} \
         --contig-thresholds 0,500,1000,1500,2000,2200,3000,3500,4000,5000,10000,25000,50000
 done
 
@@ -36,7 +37,8 @@ do
     rs="../01_raw_sequence_preprocessing/03_cleandata/${i}_S.fastq.gz"
     out="03_quality_assessment_addS/${i}"
 
-    metaquast.py 02_contigs_addS/${i}_contigs.fasta --pe1 ${r1} --pe2 ${r2} --single ${rs} --max-ref-number 0 -t 30 -o ${out} \
+    #metaquast.py 02_contigs_addS/${i}_contigs.fasta --pe1 ${r1} --pe2 ${r2} --single ${rs} --max-ref-number 0 -t 30 -o ${out} --contig-thresholds 0,500,1000,1500,2000,2200,3000,3500,4000,5000,10000,25000,50000
+    metaquast.py 02_contigs_addS/${i}_contigs.fasta --max-ref-number 0 -t 30 -o ${out} \
         --contig-thresholds 0,500,1000,1500,2000,2200,3000,3500,4000,5000,10000,25000,50000
 done
 
