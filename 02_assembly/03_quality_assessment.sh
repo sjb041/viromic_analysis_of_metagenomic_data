@@ -8,18 +8,16 @@ conda activate quast
 mkdir -p 03_quality_assessment
 mkdir -p 03_quality_assessment_addS
 
-# 评估组装质量（不加不成对的）
 sample=("F1_1A" "F1_2A" "F1_3A" "F2_1A" "F2_2A" "F2_3A" "FG_1A" "FG_2A" "FG_3A" "L1_1A" "L1_2A" "L1_3A" "L2_1A" "L2_2A" "L2_3A" "H_LX" "H_O")
-for i in "${sample[@]}"
-do
-    r1="../01_raw_sequence_preprocessing/03_cleandata/${i}_R1.fastq.gz"
-    r2="../01_raw_sequence_preprocessing/03_cleandata/${i}_R2.fastq.gz"
-    out="03_quality_assessment/${i}"
 
-    #metaquast.py 02_contigs/${i}_contigs.fasta --pe1 ${r1} --pe2 ${r2} --max-ref-number 0 -t 30 -o ${out} --contig-thresholds 0,500,1000,1500,2000,2200,3000,3500,4000,5000,10000,25000,50000
-    metaquast.py 02_contigs/${i}_contigs.fasta --max-ref-number 0 -t 30 -o ${out} \
+# 评估组装质量（不加不成对的）
+echo ${sample[@]} | tr ' ' '\n' | parallel --load 80% '
+    metaquast.py 02_contigs/{}_contigs.fasta \
+        --max-ref-number 0 \
+        -t 8 \
+        -o "03_quality_assessment_test/{}" \
         --contig-thresholds 0,500,1000,1500,2000,2200,3000,3500,4000,5000,10000,25000,50000
-done
+'
 
 # 合并评估报告
 cut -f1 ${out}/report.tsv > 03_quality_assessment/report.tsv
@@ -28,6 +26,7 @@ do
     paste 03_quality_assessment/report.tsv <(cut -f2 03_quality_assessment/${i}/report.tsv) > tmp.tsv
     mv tmp.tsv 03_quality_assessment/report.tsv
 done
+
 
 # 评估组装质量（加不成对的）
 for i in "${sample[@]}"
