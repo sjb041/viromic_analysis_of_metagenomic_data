@@ -9,7 +9,7 @@ mkdir -p 03_quality_assessment
 mkdir -p 03_quality_assessment_addS
 
 # 评估组装质量（不加不成对的）
-sample=("F1_1A" "F2_1A" "FG_1A" "H_LX" "L1_1A" "L2_1A")
+sample=("F1_1A" "F1_2A" "F1_3A" "F2_1A" "F2_2A" "F2_3A" "FG_1A" "FG_2A" "FG_3A" "L1_1A" "L1_2A" "L1_3A" "L2_1A" "L2_2A" "L2_3A" "H_LX" "H_O")
 for i in "${sample[@]}"
 do
     r1="../01_raw_sequence_preprocessing/03_cleandata/${i}_R1.fastq.gz"
