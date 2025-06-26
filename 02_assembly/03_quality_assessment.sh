@@ -20,7 +20,7 @@ echo ${sample[@]} | tr ' ' '\n' | parallel --load 80% '
 '
 
 # 合并评估报告
-cut -f1 ${out}/report.tsv > 03_quality_assessment/report.tsv
+cut -f1 03_quality_assessment/F1_1A/report.tsv > 03_quality_assessment/report.tsv
 for i in "${sample[@]}"
 do
     paste 03_quality_assessment/report.tsv <(cut -f2 03_quality_assessment/${i}/report.tsv) > tmp.tsv
