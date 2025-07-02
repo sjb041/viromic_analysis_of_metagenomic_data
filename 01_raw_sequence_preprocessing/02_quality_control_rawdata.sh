@@ -5,6 +5,9 @@
 ## gunzip GCA_000001405.29_GRCh38.p14_genomic.fna.gz
 ## conda activate kd0.7.4
 ## bowtie2-build GCA_000001405.29_GRCh38.p14_genomic.fna $HOME/db/kneaddata_db/hg_38_p14 --threads 16
+
+## wget https://genome-idx.s3.amazonaws.com/bt/GRCm39.zip
+## unzip GRCm39.zip
 ############################################################################################
 
 mkdir -p 02_quality_control_rawdata
@@ -25,11 +28,11 @@ do
 	outdir="02_quality_control_rawdata/${i}"
 	mkdir -p ${outdir}
 
-    # H样本去除宿主 hg_38_p14，其他样本去除宿主 mouse_C57BL_6NJ
+    # H样本去除宿主 hg_38_p14，其他样本去除宿主 GRCm39
     if [ "$i" = "H.LX" ] || [ "$i" = "H.O" ]; then
         db_path="$HOME/db/kneaddata_db/hg_38_p14"
     else
-        db_path="$HOME/db/kneaddata_db/mouse_C57BL_6NJ"
+        db_path="$HOME/db/kneaddata_db/GRCm39"
     fi
 
 	kneaddata -i ${in1} -i ${in2} -o ${outdir} \
