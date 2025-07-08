@@ -45,3 +45,11 @@ do
 
 	kneaddata_read_count_table --input ${outdir} --output ${outdir}/sum.tsv
 done
+
+# 合并sum.tsv
+head -n 1 ${outdir}/sum.tsv > 02_quality_control_rawdata/sum.tsv
+for i in $sample
+do
+    # 修改第二行的第一列为样本名，然后添加该行到 sum 中
+    sed -n '2s/^[^[:space:]]\+/'"$i"'/p' "02_quality_control_rawdata/${i}/sum.tsv" >> 02_quality_control_rawdata/sum.tsv
+done
