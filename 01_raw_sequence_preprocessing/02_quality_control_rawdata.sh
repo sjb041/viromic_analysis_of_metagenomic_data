@@ -47,8 +47,15 @@ do
 done
 
 # 合并sum.tsv
-head -n 1 ${outdir}/sum.tsv > 02_quality_control_rawdata/sum.tsv
-for i in $sample
+head -n 1 02_quality_control_rawdata/F1.1A/sum.tsv > 02_quality_control_rawdata/sum.tsv
+for i in F1.1A F1.2A F1.3A F2.1A F2.2A F2.3A FG.1A FG.2A FG.3A L1.1A L1.2A L1.3A L2.1A L2.2A L2.3A
+do
+    # 修改第二行的第一列为样本名，然后添加该行到 sum 中
+    sed -n '2s/^[^[:space:]]\+/'"$i"'/p' "02_quality_control_rawdata/${i}/sum.tsv" >> 02_quality_control_rawdata/sum.tsv
+done
+
+head -n 1 02_quality_control_rawdata/H.LX/sum.tsv >> 02_quality_control_rawdata/sum.tsv
+for i in H.LX H.O
 do
     # 修改第二行的第一列为样本名，然后添加该行到 sum 中
     sed -n '2s/^[^[:space:]]\+/'"$i"'/p' "02_quality_control_rawdata/${i}/sum.tsv" >> 02_quality_control_rawdata/sum.tsv
