@@ -33,7 +33,4 @@ do
 
     #rm -r $out
     #rm -r $out_addS
-    
-    #mv $out /mnt/e/2025_2ME/viromic_analysis_of_metagenomic_data/02_assembly/01_assembly_results/
-    #mv $out_addS /mnt/e/2025_2ME/viromic_analysis_of_metagenomic_data/02_assembly/01_assembly_results_addS/
 done
