@@ -15,7 +15,7 @@ echo ${sample[@]} | tr ' ' '\n' | parallel --load 80% '
     metaquast.py 02_contigs/{}_contigs.fasta \
         --max-ref-number 0 \
         -t 8 \
-        -o "03_quality_assessment_test/{}" \
+        -o "03_quality_assessment/{}" \
         --contig-thresholds 0,500,1000,1500,2000,2200,3000,3500,4000,5000,10000,25000,50000
 '
 
