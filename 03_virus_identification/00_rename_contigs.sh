@@ -14,3 +14,5 @@ do
 done
 
 rm *.fasta
+
+cat *.fna > all_contigs.fna
