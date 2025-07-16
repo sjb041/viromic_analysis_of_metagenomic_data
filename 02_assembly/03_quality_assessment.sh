@@ -6,7 +6,7 @@ source "$CONDA_BASE/etc/profile.d/conda.sh"
 conda activate quast
 
 mkdir -p 03_quality_assessment
-mkdir -p 03_quality_assessment_addS
+#mkdir -p 03_quality_assessment_addS
 
 sample=("F1_1A" "F1_2A" "F1_3A" "F2_1A" "F2_2A" "F2_3A" "FG_1A" "FG_2A" "FG_3A" "L1_1A" "L1_2A" "L1_3A" "L2_1A" "L2_2A" "L2_3A" "H_LX" "H_O")
 
@@ -37,16 +37,16 @@ do
     out="03_quality_assessment_addS/${i}"
 
     #metaquast.py 02_contigs_addS/${i}_contigs.fasta --pe1 ${r1} --pe2 ${r2} --single ${rs} --max-ref-number 0 -t 30 -o ${out} --contig-thresholds 0,500,1000,1500,2000,2200,3000,3500,4000,5000,10000,25000,50000
-    metaquast.py 02_contigs_addS/${i}_contigs.fasta --max-ref-number 0 -t 30 -o ${out} \
-        --contig-thresholds 0,500,1000,1500,2000,2200,3000,3500,4000,5000,10000,25000,50000
+    #metaquast.py 02_contigs_addS/${i}_contigs.fasta --max-ref-number 0 -t 30 -o ${out} \
+    #    --contig-thresholds 0,500,1000,1500,2000,2200,3000,3500,4000,5000,10000,25000,50000
 done
 
 # 合并评估报告
-cut -f1 ${out}/report.tsv > 03_quality_assessment_addS/report_addS.tsv
+#cut -f1 ${out}/report.tsv > 03_quality_assessment_addS/report_addS.tsv
 for i in "${sample[@]}"
 do
-    paste 03_quality_assessment_addS/report_addS.tsv <(cut -f2 03_quality_assessment_addS/${i}/report.tsv) > tmp.tsv
-    mv tmp.tsv 03_quality_assessment_addS/report_addS.tsv
+    #paste 03_quality_assessment_addS/report_addS.tsv <(cut -f2 03_quality_assessment_addS/${i}/report.tsv) > tmp.tsv
+    #mv tmp.tsv 03_quality_assessment_addS/report_addS.tsv
 done
 
 ########################## 代码解释 ###########################
