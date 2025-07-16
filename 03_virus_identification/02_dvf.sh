@@ -14,32 +14,36 @@ sample=("F1_1A" "F1_2A" "F1_3A" "F2_1A" "F2_2A" "F2_3A" "FG_1A" "FG_2A" "FG_3A" 
 #################### 运行DVF预测
 # 注意使用双引号包裹整个命令字符串，确保变量在传递给parallel之前被解析。
 echo ${sample[@]} | tr ' ' '\n' | parallel --load 80% "dvf.py -i ${contigspath}/{}_contigs.fasta -o ${out} -l 1500 -c 5"
-echo ${sample[@]} | tr ' ' '\n' | parallel --load 80% "dvf.py -i ${contigspath_addS}/{}_contigs.fasta -o ${out_addS} -l 1500 -c 5"
+#echo ${sample[@]} | tr ' ' '\n' | parallel --load 80% "dvf.py -i ${contigspath_addS}/{}_contigs.fasta -o ${out_addS} -l 1500 -c 5"
 
-
-#################### 根据阈值提取contigs
+#################### 格式化序列ID
+# 替换 name
 for i in ${sample[@]}
 do
-    # 筛选出符合的 contigID
-    awk '$3 > 0.9 && $4 < 0.01 {print $1}' ${out}/${i}_contigs.fasta_gt1500bp_dvfpred.txt > ${out}/${i}.txt
-    awk '$3 > 0.9 && $4 < 0.01 {print $1}' ${out_addS}/${i}_contigs.fasta_gt1500bp_dvfpred.txt > ${out_addS}/${i}.txt
-    
-    # 提取contigs
-    seqkit grep -f ${out}/${i}.txt ${contigspath}/${i}_contigs.fasta > ${out}/${i}_vir.fasta
-    seqkit grep -f ${out_addS}/${i}.txt ${contigspath_addS}/${i}_contigs.fasta > ${out_addS}/${i}_vir.fasta
-
-    # 错误检查
-    expected=$(wc -l < ${out}/${i}.txt)
-    real=$(grep -c '^>' ${out}/${i}_vir.fasta)
-    if [ "$expected" -ne "$real" ]; then
-        echo "检查 ${out}/${i}"
-        exit 1
-    fi
-
-    expected_addS=$(wc -l < ${out_addS}/${i}.txt)
-    real_addS=$(grep -c '^>' ${out_addS}/${i}_vir.fasta)
-    if [ "$expected_addS" -ne "$real_addS" ]; then
-        echo "检查 ${out_addS}/${i}"
-        exit 1
-    fi
+    cat ${i}_contigs.fasta_gt1500bp_dvfpred.txt | cut -f 1 | awk 'NR==1{print $0; next} {split($1,a,"_"); $1=a[1]"_"a[2]}1' > tmp1.txt
+    cat ${i}_contigs.fasta_gt1500bp_dvfpred.txt | cut -f 2,3,4 > tmp2.txt
+    paste tmp1.txt tmp2.txt > ${i}_gt1500bp.txt
+    sed "s/NODE_/${i}_contig_/g" ${i}_gt1500bp.txt > ${i}_gt1500bp_rename.txt && rm ${i}_gt1500bp.txt
 done
+rm tmp*.txt
+
+# 合并所有样本
+head -n 1 ${i}_gt1500bp_rename.txt > all_gt1500bp.txt
+for i in ${sample[@]}
+do
+    tail -n +2 ${i}_gt1500bp_rename.txt >> all_gt1500bp.txt
+done
+
+# 计算合并前的行数
+wc -l *_gt1500bp_rename.txt
+
+# 计算合并后的行数
+wc -l all_gt1500bp.txt
+
+# 备份原始的 dvfpred 文件
+mkdir -p backup_gt1500bp_dvfpred
+mv ./*gt1500bp_dvfpred.txt ./backup_gt1500bp_dvfpred/
+
+# 备份替换 name 之后的 dvfpred 文件
+mkdir -p backup_rename
+mv ./*gt1500bp_rename.txt ./backup_rename/
