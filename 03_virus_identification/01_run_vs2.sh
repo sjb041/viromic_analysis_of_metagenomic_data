@@ -17,3 +17,7 @@ time virsorter run -i all_contigs.fna -w vs2_keep-l4k-s0.5 --keep-original-seq -
 # sys     502m17.363s
 
 time virsorter run -i all_contigs.fna -w vs2_l4k-s0.5 --include-groups dsDNAphage,ssDNA --min-length 4000 --min-score 0.5 -j 30 all
+
+# real    957m36.394s
+# user    16872m10.353s
+# sys     498m56.884s
