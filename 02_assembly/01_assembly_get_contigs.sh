@@ -6,13 +6,13 @@ source "$CONDA_BASE/etc/profile.d/conda.sh"
 conda activate spades
 
 mkdir -p 01_assembly_results
-mkdir -p 02_contigs
+mkdir -p 02_contigs/rename_contigs
 #mkdir -p 01_assembly_results_addS
-#mkdir -p 02_contigs_addS
+#mkdir -p 02_contigs_addS/rename_contigs
 
 sample="F1_1A F1_2A F1_3A F2_1A F2_2A F2_3A FG_1A FG_2A FG_3A L1_1A L1_2A L1_3A L2_1A L2_2A L2_3A H_LX H_O"
 
-# 组装
+######################################## 组装
 #for i in "${sample[@]}"
 for i in $sample
 do
@@ -33,4 +33,15 @@ do
 
     #rm -r $out
     #rm -r $out_addS
+done
+
+######################################## 序列ID格式化
+# 序列重命名
+for sample in $sample
+do
+ 
+    # 使用 seqkit 重命名序列
+    seqkit replace -p ".*" -r "${sample}_contig_{nr}" "02_contigs/${sample}_contigs.fasta" -o "02_contigs/rename_contigs/${sample}_contigs.fna"
+    echo "${sample} done"
+
 done
