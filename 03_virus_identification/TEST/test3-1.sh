@@ -88,8 +88,6 @@ anicalc.py -i blast_out.tsv -o ani.tsv
 # 使用推荐的 MIUVIG 参数（95% ANI + 85% AF）进行类似 CD-HIT 的聚类
 aniclust.py --fna complete.fna --ani ani.tsv --out clusters.tsv --min_ani 95 --min_tcov 85 --min_qcov 0
 
-cd ..
-
 
 #---------------------------------- 画图select_HVR.Rmd
 ---
