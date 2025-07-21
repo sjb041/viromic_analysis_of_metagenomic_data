@@ -137,7 +137,7 @@ cpv <- read.fasta(file = cpv_path,
                     whole.header = TRUE)
                     
 # 从complete.fa中提取出vOTUs 
-vOTUs_fasta <- cpv[ids(cpv) %in% clusters[,1]]   # 不能使用 clusters[1] 因为它是一个数据框
+vOTUs_fasta <- cpv[names(cpv) %in% clusters[,1]]   # 不能使用 clusters[1] 因为它是一个数据框
 
 # 判断是否能全部提取出clusters里的序列
 if (dim(clusters)[1] != length(vOTUs_fasta)){
@@ -146,7 +146,7 @@ if (dim(clusters)[1] != length(vOTUs_fasta)){
 message("Number complete vOTUs:",length(vOTUs_fasta))
 
 # 输出vOTUs 
-write.fasta(sequences = vOTUs_fasta, names = ids(vOTUs_fasta), file.out = vOTUs_path)
+write.fasta(sequences = vOTUs_fasta, names = names(vOTUs_fasta), file.out = vOTUs_path)
 ```
 
 ```{r}
@@ -155,7 +155,7 @@ write.fasta(sequences = vOTUs_fasta, names = ids(vOTUs_fasta), file.out = vOTUs_
 df1 <- read.delim(file = quality_summary_path, header = T, stringsAsFactors = F, check.names = F)
 
 # 筛选评分表，提取出 vOTUs 的评分
-df1 <- dplyr::filter(df1, contig_id %in% ids(vOTUs_fasta))
+df1 <- dplyr::filter(df1, contig_id %in% names(vOTUs_fasta))
 
 # 判断是否每一个vOTUs都找到了自己的评分表
 if (dim(df1)[1] != length(vOTUs_fasta)){
@@ -261,7 +261,7 @@ non_pro_vOTUs$HVR_group <- ifelse(non_pro_vOTUs$HVR <= 0.5, "Yes", "No")
 
 # 绘制对数密度图
 pc <- ggplot(non_pro_vOTUs, aes(x = log10(host_genes), fill = HVR <= 0.5)) +
-      geom_density(alpha = 0.25) +
+      geom_density(alpha = 0.5) +
       scale_fill_manual(values = c("#E69F00", "#D5B4AD")) +  # 设置填充颜色
       labs(x = expression(Log[10]~"of the number of host genes"), y = "Density") +
       theme_minimal()
