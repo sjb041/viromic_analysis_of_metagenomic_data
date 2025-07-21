@@ -288,4 +288,8 @@ tail -n +2 false_ids.txt | cut -f 1 | seqkit grep -n -v -f - ../03_filter1/virus
 cut -f1 false_ids.txt | sed '1d' | grep -v -F -w -f - ../03_filter1/viruses2_quality_summary.tsv > viruses3_quality_summary.tsv
 # -F：固定字符串匹配（不用正则，速度快）-w：整词匹配（防止部分ID误匹配）-f：指定ID列表文件 -v：反选
 
+seqkit stats viruses3.fna
+#file          format  type  num_seqs     sum_len  min_len  avg_len  max_len
+#viruses3.fna  FASTA   DNA      4,584  48,434,375    1,247   10,566  149,070
+
 cd ..
