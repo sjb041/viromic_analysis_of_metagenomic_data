@@ -19,4 +19,4 @@ head -n 1 ../vs2_l4k-s0.5/final-viral-boundary.tsv > final-viral-boundary.tsv &&
 # 提取序列
 cut -f1 final-viral-score.tsv | sed '1d' | seqtk subseq ../vs2_l4k-s0.5/final-viral-combined.fa - > final-viral-combined.fa && grep -c '^>' final-viral-combined.fa
 
- rm contigs_filter_length.txt final-viral-score-filtered.tsv vs2_ids.txt intersection.txt
+rm contigs_filter_length.txt final-viral-score-filtered.tsv vs2_ids.txt intersection.txt
