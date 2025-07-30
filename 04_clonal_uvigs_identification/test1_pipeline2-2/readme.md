@@ -1,5 +1,7 @@
 想法1：分组UViGs聚类成vOTU（(ANI) ≥ 95%+ (AF) ≥ 85%），提取出votu队长， 分组与H的votu代表比较。满足 (ANI ≥ 99.4% over AF ≥ 85%)的Two vOTU队长 were considered clones。【关键点：克隆数基于votu队长的数量】
 
+<img width="712" height="390" alt="image" src="https://github.com/user-attachments/assets/3effc22d-8403-494a-907e-2cac89852b21" />
+
 ---
 
 **test1：基于病毒识别的方法`pipeline2-2`**
