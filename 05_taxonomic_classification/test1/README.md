@@ -26,7 +26,7 @@ Taxonomic classification of vOTUs was performed using Diamond (v2.0.13.151) [[47
 
 - `BAB03582.1`：这是序列在数据库中的登录号 (Accession Number) 是唯一的登录号，用于在数据库中精准定位这条序列。
 - `V2`：这是该序列所编码的特定蛋白质或基因的名称/标识符。
-- `AB007990`：对应参考序列的登录号，==该登录号对应唯一的分类学谱系（Lineage）==。
+- `AB007990`：对应参考序列的登录号，**该登录号对应唯一的分类学谱系（Lineage）**。
 
 ---
 
@@ -702,4 +702,5 @@ onsuccess:
 | votu_id                  | family       | lineage_diamond                                              | lineage_genomad                                              |
 | ------------------------ | ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | F1_1A_contig_100\|\|full | Unclassified | Viruses; Duplodnaviria; Heunggongvirae; Uroviricota; Caudoviricetes; unclassified Caudoviricetes | Viruses; Duplodnaviria; Heunggongvirae; Uroviricota; Caudoviricetes;; |
+
 
