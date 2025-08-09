@@ -14,7 +14,7 @@ Taxonomic classification of vOTUs was performed using Diamond (v2.0.13.151) [[47
 
 #### 流程图
 
-![image-20250809113832288](图片\image-20250809113832288.png)
+![image-20250809113832288](图片/image-20250809113832288.png)
 
 ##### Virus-Host DB数据库处理
 
@@ -22,7 +22,7 @@ Taxonomic classification of vOTUs was performed using Diamond (v2.0.13.151) [[47
 
 ###### **数据库文件解释：**
 
-![image-20250809122449903](图片\image-20250809122449903.png)
+![image-20250809122449903](图片/image-20250809122449903.png)
 
 `virushostdb.cds.faa`FASTA 格式的病毒编码区蛋白序列，蓝色部分对应`virushostdb.tsv`的`refseq`列
 
@@ -30,7 +30,7 @@ Taxonomic classification of vOTUs was performed using Diamond (v2.0.13.151) [[47
 
 
 
-![image-20250809122549827](图片\image-20250809122549827.png)
+![image-20250809122549827](图片/image-20250809122549827.png)
 
 `taxid2lineage_abbreviated_VH.tsv`各列依次为：每个分类单元的ID，最终的分类，各上级分类等级【行数为宿主+病毒，目前不知道有什么作用】
 
@@ -38,7 +38,7 @@ Taxonomic classification of vOTUs was performed using Diamond (v2.0.13.151) [[47
 
 
 
-![image-20250809122608430](图片\image-20250809122608430.png)
+![image-20250809122608430](图片/image-20250809122608430.png)
 
 `taxid2lineage_full_VH.tsv`各列依次为：每个分类单元的ID，最终的分类，各上级分类等级（有时会有比`abbreviated`文件更细一些的等级）【行数为宿主+病毒，目前不知道有什么作用】
 
@@ -622,4 +622,5 @@ onsuccess:
 | votu_id                  | family       | lineage_diamond                                              | lineage_genomad                                              |
 | ------------------------ | ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
 | F1_1A_contig_100\|\|full | Unclassified | Viruses; Duplodnaviria; Heunggongvirae; Uroviricota; Caudoviricetes; unclassified Caudoviricetes | Viruses; Duplodnaviria; Heunggongvirae; Uroviricota; Caudoviricetes;; |
+
 
