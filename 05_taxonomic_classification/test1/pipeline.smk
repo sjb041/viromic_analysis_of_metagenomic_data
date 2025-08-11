@@ -283,9 +283,13 @@ SAMPLES = [
 virus_dir = "/home/shijiabin/2025_2ME/03_virus_identification/03_pipeline2-2/07_all_sample_results"
 
 # 参考数据库的路径
-genomad_db_path = "/home/shijiabin/db/genomad_db"
-virushostdb_path = "virushostdb_release225/virushostdb"
-refseq_family_path = "virushostdb_release225/refseq_family.tsv"
+db_dir = "/home/shijiabin/db"
+
+genomad_db_path = f"{db_dir}/genomad_db"
+
+virushostdb_dir = f"{db_dir}/virushostdb_release229_2025-06-03"
+virushostdb_path = f"{virushostdb_dir}/virushostdb"
+refseq_family_path = f"{virushostdb_dir}/refseq_family.tsv"
 
 # 输出日志文件(汇总注释的序列数量)
 log_path = "output.log"
@@ -294,11 +298,59 @@ log_path = "output.log"
 #threads = 20
 
 ##################################### 定义流程规则
-# 创建日志目录
 onstart:
+    # 下载并处理 Virus-Host DB 数据库
+    shell(
+        """
+        # 检查数据库是否已配置
+        if [ -f {virushostdb_dir}/virushostdb_configured ]; then
+            echo "Virus-Host DB 数据库已配置，跳过下载和处理步骤，当前使用的版本是 release229 (2025-06-03)\n"
+            exit 0
+        fi
+
+        echo "正在配置 Virus-Host DB 数据库，当前使用的版本是 release229 (2025-06-03)...\n"
+        
+        mkdir -p {virushostdb_dir} && cd {virushostdb_dir}
+        
+        # 下载数据库文件
+        wget "https://www.genome.jp/ftp/db/virushostdb/old/release229/virushostdb.tsv"
+        wget "https://www.genome.jp/ftp/db/virushostdb/old/release229/virus_genome_type.tsv"
+        wget "https://www.genome.jp/ftp/db/virushostdb/old/release229/virushostdb.cds.faa.gz"
+    
+        # 构建 diamond 索引
+        gunzip virushostdb.cds.faa.gz
+        diamond makedb --in virushostdb.cds.faa --db virushostdb
+
+        # 格式化分类信息文件
+        cut -f 1,2,3,4 virushostdb.tsv | sort -r | uniq > virushostdb_nonredundant.tsv
+        awk -F'\t' -v OFS='\t' '{{print $1, $4, $18, $15, $5, $7, $8, $10, $11, $12}}' virus_genome_type.tsv > tmp
+
+        head -n1 virushostdb_nonredundant.tsv > header1
+        tail -n +2 virushostdb_nonredundant.tsv | sort -k1,1 > sorted1
+        head -n1 tmp > header2
+        tail -n +2 tmp | sort -k1,1 > sorted2
+
+        cut -f2- header2 | paste header1 - > final_header
+
+        join -t $'\t' -1 1 -2 1 -a 1 sorted1 sorted2 > joined_data
+
+        cat final_header joined_data > final_tax.tsv
+
+        awk 'BEGIN {{FS=OFS="\t"}} NR>1 {{split($4, refseqs, ","); for(i in refseqs) {{gsub(/^[ 	]+|[ 	]+$/, "", refseqs[i]); print refseqs[i], $11, $3}}}}' final_tax.tsv > refseq_family.tsv
+        awk 'BEGIN {{FS=OFS="\t"}} {{if($2 == "") $2="Unclassified"}} 1' refseq_family.tsv | sort | uniq > tmp && mv tmp refseq_family.tsv
+        
+        rm header1 sorted1 header2 sorted2 final_header joined_data
+
+        # 创建标记文件，标记数据库已配置完成
+        touch virushostdb_configured
+
+        echo "\nVirus-Host DB 配置完毕\n"
+        """
+    )
+
     #shell("echo '单个任务使用的线程数: {threads}'")
     # 删除旧的日志文件
-    shell("rm -f {log_path}")
+    shell("rm -f {log_path} && echo '\n已初始化日志文件，开始处理样本 {SAMPLES}'")
 
 # 最终要生成的文件
 rule all:
@@ -447,7 +499,5 @@ onsuccess:
         echo "===================================="
         cat {log_path}
         """
-    )
-
-        
+    )   
 
