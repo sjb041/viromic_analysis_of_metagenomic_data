@@ -34,7 +34,7 @@ Taxonomic classification of vOTUs was performed using Diamond (v2.0.13.151) [[47
 | F1_1A_contig_100\|\|full | Unclassified | Viruses; Duplodnaviria; Heunggongvirae; Uroviricota; Caudoviricetes; unclassified Caudoviricetes | Viruses; Duplodnaviria; Heunggongvirae; Uroviricota; Caudoviricetes;; |
 
 
-##### 关于 Virus-Host DB数据库处理的解释
+#### 关于 Virus-Host DB数据库处理的解释
 
 下载http://genome.jp/ftp/db/virushostdb/old/release225/ (downloaded in November 2024)
 
@@ -207,6 +207,7 @@ touch virushostdb_configured
 最终得到的`refseq_family.tsv`就是整理好的分类信息文件
 
 ![image-20250809123533893](图片/image-20250809123533893.png)
+
 
 
 
