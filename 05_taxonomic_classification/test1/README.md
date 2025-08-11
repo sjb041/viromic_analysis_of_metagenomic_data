@@ -14,7 +14,27 @@ Taxonomic classification of vOTUs was performed using Diamond (v2.0.13.151) [[47
 
 ![image-20250809113832288](图片/image-20250809113832288.png)
 
-##### Virus-Host DB数据库处理
+##### 流程步骤
+
+- **cluster**：we clustered viral sequences at a 95% average nucleotide similarity threshold (≥ 85% coverage)
+- **Prodigal**：(v2.6.3)  with the parameter `-p meta`
+- **MMseqs2**: (v12.113e3) in *easy-linclust mode* with the parameters `–min-seq-id 0.9 –cov-mode 1 -c 0.8 –kmer-per-seq 80`
+- **Diamond**： (v2.0.13.151) with parameters `–id 30 –query-cover 50 –min-score 50 –max-target-seqs 10`
+- **Virus-Host DB**： (downloaded in November 2024)
+- **geNomad**：we also provided taxonomic classification results of all vOTUs based on the geNomad database
+
+#### 运行此流程
+
+`snakemake -s pipeline.smk --cores 5 --use-conda`
+
+#### 输出示例
+
+| votu_id                  | family       | lineage_diamond                                              | lineage_genomad                                              |
+| ------------------------ | ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
+| F1_1A_contig_100\|\|full | Unclassified | Viruses; Duplodnaviria; Heunggongvirae; Uroviricota; Caudoviricetes; unclassified Caudoviricetes | Viruses; Duplodnaviria; Heunggongvirae; Uroviricota; Caudoviricetes;; |
+
+
+##### 关于 Virus-Host DB数据库处理的解释
 
 下载http://genome.jp/ftp/db/virushostdb/old/release225/ (downloaded in November 2024)
 
@@ -188,24 +208,6 @@ touch virushostdb_configured
 
 ![image-20250809123533893](图片/image-20250809123533893.png)
 
-##### 流程步骤
-
-- **cluster**：we clustered viral sequences at a 95% average nucleotide similarity threshold (≥ 85% coverage)
-- **Prodigal**：(v2.6.3)  with the parameter `-p meta`
-- **MMseqs2**: (v12.113e3) in `easy-linclust`` mode` with the parameters `–min-seq-id 0.9 –cov-mode 1 -c 0.8 –kmer-per-seq 80`
-- **Diamond**： (v2.0.13.151) with parameters `–id 30 –query-cover 50 –min-score 50 –max-target-seqs 10`
-- **Virus-Host DB**： (downloaded in November 2024)
-- **geNomad**：we also provided taxonomic classification results of all vOTUs based on the geNomad database
-
-#### 复现流程代码
-
-`snakemake -s pipeline.smk --cores 5 --use-conda`
-
-#### 输出示例
-
-| votu_id                  | family       | lineage_diamond                                              | lineage_genomad                                              |
-| ------------------------ | ------------ | ------------------------------------------------------------ | ------------------------------------------------------------ |
-| F1_1A_contig_100\|\|full | Unclassified | Viruses; Duplodnaviria; Heunggongvirae; Uroviricota; Caudoviricetes; unclassified Caudoviricetes | Viruses; Duplodnaviria; Heunggongvirae; Uroviricota; Caudoviricetes;; |
 
 
 
