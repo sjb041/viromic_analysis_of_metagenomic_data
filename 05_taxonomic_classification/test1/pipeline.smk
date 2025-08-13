@@ -437,20 +437,20 @@ rule assign_classification:
     input:
         diamond_results = "04_diamond/{sample}.tsv"
     output:
-        diamond_best_match = "05_diamond_classification/{sample}/01_best_match.tsv",
+        #diamond_best_match = "05_diamond_classification/{sample}/01_best_match.tsv",
         diamond_format = "05_diamond_classification/{sample}/02_format.tsv",
         merge_diamond_refseq = "05_diamond_classification/{sample}/03_merge.tsv",
         diamond_classification = "05_diamond_classification/{sample}/04_classification.tsv"
     run:
         # 依次执行每个函数
-        if not select_best_matches(input.diamond_results, output.diamond_best_match):
-            raise Exception("select_best_matches failed")
-        if not format_diamond_results(output.diamond_best_match, output.diamond_format):
-            raise Exception("format_diamond_results failed")
-        if not merge_diamond_refseq(refseq_family_path, output.diamond_format, output.merge_diamond_refseq):
-            raise Exception("merge_diamond_refseq failed")
-        if not assign_family_classification(output.merge_diamond_refseq, output.diamond_classification):
-            raise Exception("assign_family_classification failed")
+        #if not select_best_matches(input.diamond_results, output.diamond_best_match):
+            #raise Exception("select_best_matches failed")
+        
+		# 不选择最佳匹配
+        format_diamond_results(input.diamond_results, output.diamond_format)
+        merge_diamond_refseq(refseq_family_path, output.diamond_format, output.merge_diamond_refseq)
+        assign_family_classification(output.merge_diamond_refseq, output.diamond_classification)
+
 
 # 合并基于diamond的分类信息和基于genomad的分类信息
 rule merge_classification:
@@ -499,5 +499,4 @@ onsuccess:
         echo "===================================="
         cat {log_path}
         """
-    )   
-
+    )
