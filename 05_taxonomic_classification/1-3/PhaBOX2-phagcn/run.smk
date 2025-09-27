@@ -6,70 +6,58 @@
 
 # 运行: snakemake -s run.smk --cores 5 --use-conda
 
-##### 待改进部分：
-# 1. 处理最终分类结果表,提取出科级分类另做一列
-
 import os
 import pandas as pd
 
 ### 定义函数,处理分类结果表
-def extract_family(lineage):
+# 提取各分类等级,并处理空值
+def process_lineage(df, lineage_col="Lineage"):
     """
-    从lineage字符串中提取family信息
+    从 Lineage 列解析出各分类等级，并处理空值。
     
-    参数:
-    lineage (str): 包含分类信息的字符串
-    
-    返回:
-    str: family名称或'unknown'
+    - 提取等级: kingdom, phylum, class, order, family, subfamily, genus
+    - 空值处理逻辑: 从 genus 开始依次往左，
+        如果该等级为空:
+            - 上一级也为空 -> "unknown"
+            - 上一级不为空 -> "Unclassified{上一级值}"
     """
-    # 处理空值和特殊值
-    if pd.isna(lineage) or lineage == 'no hits to database':
-        return 'unknown'
+    ranks = ['kingdom', 'phylum', 'class', 'order', 'family', 'subfamily', 'genus']
     
-    # 按分号分割lineage字符串
-    elements = lineage.split(';')
+    # -------- 解析 Lineage 字符串为 dict --------
+    def parse_lineage(lineage_str):
+        items = str(lineage_str).split(";")
+        rank_dict = {}
+        for item in items:
+            if ":" in item:
+                k, v = item.split(":", 1)
+                rank_dict[k.strip()] = v.strip()
+        return rank_dict
     
-    # 查找以"family:"开头的元素
-    for element in elements:
-        if element.startswith('family:'):
-            # 返回冒号后的部分（family名称）
-            return element.split(':')[1]
+    parsed = df[lineage_col].apply(parse_lineage)
     
-    # 如果没有找到family信息，返回unknown
-    return 'unknown'
+    # -------- 提取目标等级 --------
+    for r in ranks:
+        df[r] = parsed.apply(lambda d: d.get(r, None))
+    
+    # -------- 空值回填处理 --------
+    for i in range(len(ranks)-1, -1, -1):  # 从右往左
+        rank = ranks[i]
+        for idx in df.index:
+            if pd.isna(df.at[idx, rank]) or df.at[idx, rank] == "":
+                if i == 0:  # kingdom 特殊情况
+                    df.at[idx, rank] = "unknown"
+                else:
+                    parent_rank = ranks[i-1]
+                    parent_val = df.at[idx, parent_rank]
+                    if pd.isna(parent_val) or parent_val == "":
+                        df.at[idx, rank] = "unknown"
+                    else:
+                        df.at[idx, rank] = f"Unclassified{parent_val}"
+    
+    cols_to_keep = ["Accession", "Prokaryotic virus (Bacteriophages and Archaeal virus)", "Lineage", "kingdom", "phylum", "class", "order", "family", "subfamily", "genus"]
+    df_out = df[cols_to_keep]
 
-def add_family_column(df):
-    """
-    在PhaGCN预测结果数据框中,
-    Lineage列的内容按";"分隔,取以"family:"开头的元素,作为该行新的列Family的值,
-    如果没有以"family:"开头的元素,则为"unknown",
-    Family放在第3列位置
-
-    参数:
-    df (pandas.DataFrame): PhaGCN预测结果的数据框
-    
-    返回:
-    pandas.DataFrame: 处理后的数据框
-    """
-    
-    # 创建数据框的副本以避免修改原始数据
-    df_copy = df.copy()
-    
-    # 创建Family列
-    df_copy['Family'] = df_copy['Lineage'].apply(extract_family)
-    
-    # 重新排列列的顺序，将Family列放在第3列（索引为2）
-    cols = df_copy.columns.tolist()
-    
-    # 找到Family列的当前位置
-    family_col_index = cols.index('Family')
-    
-    # 将Family列移到第3列位置（索引为2）
-    new_cols = cols[:2] + [cols[family_col_index]] + cols[2:family_col_index] + cols[family_col_index+1:]
-    df_copy = df_copy[new_cols]
-    
-    return df_copy
+    return df_out
 
 ##################################### 定义全局变量
 # 样本名
@@ -128,7 +116,7 @@ rule PhaBOX2_phagcn_votus:
         # 仅运行分类注释
         "phabox2 --task phagcn --contigs {input.votus} --dbdir {db_dir} --outpth {output.dir} --len {min_len} --threads {threads} > {log} 2>&1"
 
-# 添加Family列
+# 添加各等级列
 rule postprocess_votus:
     input:
         tax = "votus_{type}/PhaBOX2_phagcn/{sample}/final_prediction/phagcn_prediction.tsv"
@@ -136,7 +124,7 @@ rule postprocess_votus:
         final_tax = "votus_{type}/{sample}_taxonomy.tsv"
     run:
         df = pd.read_csv(input.tax, sep='\t')
-        result_df = add_family_column(df)
+        result_df = process_lineage(df)
         result_df.to_csv(output.final_tax, sep='\t', index=False)
 
 # ------------------- uvigs 分类 ------------------- #
@@ -155,7 +143,7 @@ rule PhaBOX2_phagcn_uvigs:
         # 仅运行分类注释
         "phabox2 --task phagcn --contigs {input.virus} --dbdir {db_dir} --outpth {output.dir} --len {min_len} --threads {threads} > {log} 2>&1"
 
-# 添加Family列
+# 添加各等级列
 rule postprocess_uvigs:
     input:
         tax = "uvigs_{type}/PhaBOX2_phagcn/{sample}/final_prediction/phagcn_prediction.tsv"
@@ -163,5 +151,5 @@ rule postprocess_uvigs:
         final_tax = "uvigs_{type}/{sample}_taxonomy.tsv"
     run:
         df = pd.read_csv(input.tax, sep='\t')
-        result_df = add_family_column(df)
+        result_df = process_lineage(df)
         result_df.to_csv(output.final_tax, sep='\t', index=False)
