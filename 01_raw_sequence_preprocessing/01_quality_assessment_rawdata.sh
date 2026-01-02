@@ -1,5 +1,5 @@
 # 执行此脚本的方法
-# bash myscript.sh
+# bash 01_quality_assessment_rawdata.sh
 
 # 动态获取Conda路径
 CONDA_BASE=$(conda info --base)
