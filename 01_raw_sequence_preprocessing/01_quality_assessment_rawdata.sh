@@ -7,7 +7,7 @@ CONDA_BASE=$(conda info --base)
 source "$CONDA_BASE/etc/profile.d/conda.sh"
 
 # 创建文件夹存放fastqc的输出
-mkdir 01_quality_assessment_rawdata
+mkdir -p 01_quality_assessment_rawdata
 
 # 质量评估
 (
