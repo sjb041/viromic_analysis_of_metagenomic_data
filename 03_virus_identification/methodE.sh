@@ -128,7 +128,7 @@ grep -c '^>' $dir_checkv/proviruses.fna
 
 ######################################### step5 统一重命名预测出的所有病毒 viruses_checkv.fna, 后续的所有分类注释方案均使用重命名后的序列
 ### 分别提取出 viruses_checkv.fna 中各样本的序列, 然后重命名, 最后再合并所有样本到一个文件中
-mkdir 05_separate_samples && cd 05_separate_samples
+mkdir 05_rename && cd 05_rename
 sample="F1_1A F1_2A F1_3A F2_1A F2_2A F2_3A FG_1A FG_2A FG_3A L1_1A L1_2A L1_3A L2_1A L2_2A L2_3A H_LX H_O"
 
 # 按样本拆分评分表和序列文件
@@ -145,3 +145,9 @@ done
 cat *_rename.fna > ../all_viruses.fna && grep -c '^>' ../all_viruses.fna
 
 cd ..
+
+######################################### step6 聚类得到 votu
+dir_cluster="06_cluster"
+
+cluster.sh -i all_viruses.fna -t all_viruses.fna -a 95 -o $dir_cluster
+cp $dir_cluster/votus.fna votus.fna && grep -c '^>' votus.fna
