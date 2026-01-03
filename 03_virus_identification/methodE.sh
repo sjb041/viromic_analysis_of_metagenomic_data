@@ -110,21 +110,23 @@ grep -w 'No'  $dir_checkv/quality_summary.tsv | wc -l
 grep -c '^>' $dir_checkv/proviruses.fna
 
 ######################################### (可选) 从 viruses_checkv.fna 中选取 high-quality 和 medium_quality
-### 首先使用 all_viruses.fna 跑一遍 checkv 评估, 以下使用这次评估的 quality_summary.tsv
+### 因为quality_summary有4200行,而viruses_checkv中有4201条序列,
+### 说明如果从quality_summary的第一列提取id,那么有一个id对应两条序列,
+### 所以根据这些id提取viruses_checkv中的序列时,需要正则匹配
 
 #### 从 all_viruses.fna 中选取 high-quality
-# 用 Excel 筛选要保留的部分,然后手动复制第一列contig_id, 289
+# 用 Excel 筛选要保留的部分,然后手动复制第一列 contig_id, 287 行
 #quality_summary.tsv ——→ high_quality.xlsx ——→ high_ids.txt
 
-# 提取 high, 289
-#seqkit grep -f high_ids.txt all_viruses.fna > all_viruses_hq.fna && grep -c '^>' all_viruses_hq.fna
+# 修改 ids.txt 生成可用的正则文件, || → \|\|, 在每行开头加 ^
+#sed -E 's/([][().*+?^$|\\])/\\\1/g; s/^/^/' high_ids.txt > high_ids.regex
 
-#### 从 viruses_checkv.fna 中选取 medium_quality
-# 用 Excel 筛选要保留的部分,然后手动复制第一列contig_id, 376
-#quality_summary.tsv ——→ medium_quality.xlsx ——→ medium_ids.txt
+# 提取 high, -r 使用正则表达式进行部分匹配,-f 指定包含多个模式的文件（每行一个）
+#seqkit grep -r -f high_ids.regex viruses_checkv.fna > viruses_checkv_hq.fna && grep -c '^>' viruses_checkv_hq.fna
 
-# 提取 mediums, 376
-#seqtk subseq all_viruses.fna medium_ids.txt > all_viruses_mq.fna && grep -c '^>' all_viruses_mq.fna
+#### 从 viruses_checkv.fna 中选取 medium_quality, 逻辑同上
+
+### 之后可以根据rename的mapping文件来改名,从而由 viruses_checkv_hq.fna ---> all_viruses_hq.fna
 
 ######################################### step5 统一重命名预测出的所有病毒 viruses_checkv.fna, 后续的所有分类注释方案均使用重命名后的序列
 ### 分别提取出 viruses_checkv.fna 中各样本的序列, 然后重命名, 最后再合并所有样本到一个文件中
@@ -150,4 +152,6 @@ cd ..
 dir_cluster="06_cluster"
 
 cluster.sh -i all_viruses.fna -t all_viruses.fna -a 95 -o $dir_cluster
+
+# 2192 条 votu 代表序列
 cp $dir_cluster/votus.fna votus.fna && grep -c '^>' votus.fna
