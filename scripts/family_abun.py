@@ -61,7 +61,11 @@ def plot_family_heatmap(family_df, output_png):
     plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False
 
-    family_df = family_df[family_df['Family'] != 'Unknown']
+    # 排除 Family 为 'Unknown' 或者以 'uc_' 开头的
+    family_df = family_df[
+        (family_df['Family'] != 'Unknown') &
+        (~family_df['Family'].str.startswith('uc_'))
+    ]
     heatmap_data = family_df.set_index('Family')
     samples = [c.replace('rel_abun_', '') for c in heatmap_data.columns]
     heatmap_data.columns = samples
