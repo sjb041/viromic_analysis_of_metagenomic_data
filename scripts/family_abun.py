@@ -33,8 +33,15 @@ def calculate_family_abundance(votu_abundance_file, taxonomy_file, family_file):
     if 'family' in merged.columns and 'Family' not in merged.columns:
         merged = merged.rename(columns={'family': 'Family'})
 
-    # 将缺失 Family 填充为 'unknown'
-    merged['Family'] = merged['Family'].fillna('unknown')
+    # 将缺失 Family 填充为 'Unknown'
+    merged['Family'] = merged['Family'].fillna('Unknown')
+
+    # 将 unclassified / Unclassified / 'unknown' 等统一改为 'Unknown'
+    merged['Family'] = merged['Family'].astype(str).str.strip()  # 去掉前后空格
+    merged['Family'] = merged['Family'].replace(
+        to_replace=['unclassified', 'Unclassified', 'unknown', "'unknown'"],
+        value='Unknown'
+    )
 
     #merged.to_csv(merged_file, sep='\t', index=False)
 
@@ -54,7 +61,7 @@ def plot_family_heatmap(family_df, output_png):
     plt.rcParams['font.sans-serif'] = ['SimHei', 'Arial Unicode MS', 'DejaVu Sans']
     plt.rcParams['axes.unicode_minus'] = False
 
-    family_df = family_df[family_df['Family'] != 'unknown']
+    family_df = family_df[family_df['Family'] != 'Unknown']
     heatmap_data = family_df.set_index('Family')
     samples = [c.replace('rel_abun_', '') for c in heatmap_data.columns]
     heatmap_data.columns = samples
