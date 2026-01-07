@@ -35,7 +35,7 @@ def sampling_reads(bbmap_reformat, in1, in2, out1, out2, num_reads, seed, thread
 ###################################### step2 bowtie2 比对
 def run_bowtie2_mapping(votus, reads1, reads2, output_dir, outputfile_prefix, threads):
     """
-    使用 Bowtie2 将 reads 比对到 vOTUs，并输出 SAM 文件
+    使用 Bowtie2 将 reads 比对到 vOTUs, 并输出 SAM 文件
     """
     os.makedirs(output_dir, exist_ok=True)
     index = os.path.join(output_dir, "index")
