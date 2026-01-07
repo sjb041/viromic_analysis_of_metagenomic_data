@@ -214,7 +214,7 @@ def main():
     abun_files = [] 
     for sample in SAMPLES:
 
-        #### step1 采样 1500 万条 reads 
+        #### step1 采样 1500 万对 reads 
         # 输入
         in1 = os.path.join(reads_dir, f"{sample}_R1.fastq.gz")
         in2 = os.path.join(reads_dir, f"{sample}_R2.fastq.gz")
