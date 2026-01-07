@@ -15,8 +15,8 @@ import pandas as pd
 #   参考文献: The Chinese gut virus catalogue reveals gut virome diversity and disease-related viral signatures   
 # 
 # Dependencies:
-#   bowtie2 --version 2.3.5.1
 #   BBMap/reformat.sh --version 39.61
+#   bowtie2 --version 2.3.5.1
 #   samtools --version 1.10
 ######################################
 
