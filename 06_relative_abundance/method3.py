@@ -8,7 +8,7 @@ import pandas as pd
 #
 # Description:
 #   计算相对丰度,公式3:
-#       每对样本随机采样 1500 对 reads,
+#       每对样本随机采样 1500 万对 reads,
 #       使用 bowtie2 比对每一对样本的 reads 到 votus,
 #       相对丰度计算: rel_abun = mapped_reads  / sum(mapped_reads)
 #   参考文献: A catalog of 48,425 nonredundant viruses from oral metagenomes expands the horizon of the human oral
@@ -18,7 +18,7 @@ import pandas as pd
 #   samtools --version 1.10
 ######################################
 
-###################################### step1 采样 1500 万条 reads
+###################################### step1 采样 1500 万对 reads
 def sampling_reads(bbmap_reformat, in1, in2, out1, out2, num_reads, seed, threads):
     """
     使用 BBMap/reformat.sh 随机成对采样 reads
