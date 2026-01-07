@@ -95,7 +95,9 @@ def parse_idxstats(idxstats_file, sample_name, abun_file):
     """
     解析 samtools idxstats 输出文件
     计算相对丰度
-    输出一个表格, 两列, vOTU rel_abun_{sample_name}
+    输出两个表格: 
+        相对丰度表, 2 列, vOTU    rel_abun_{sample_name}
+        计算过程表, 6 列, vOTU    length    mapped    unmapped    count_per_bp    rel_abun_{sample_name}
     """
     data = pd.read_csv(idxstats_file, sep='\t', header=None, 
                        names=['vOTU', 'length', 'mapped', 'unmapped'])
