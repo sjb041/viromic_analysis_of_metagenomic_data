@@ -224,7 +224,7 @@ def main():
         out1 = f"{dir_sampling}/{sample}_R1.fastq.gz"
         out2 = f"{dir_sampling}/{sample}_R2.fastq.gz"
         # 采样
-        sampling_reads(bbmap_reformat, in1, in2, out1, out2, num_reads=1500000, seed=42, threads=threads)
+        sampling_reads(bbmap_reformat, in1, in2, out1, out2, num_reads=15000000, seed=42, threads=threads)
 
         #### step2 使用 bowtie2 , 比对每一个样本的 reads 到 votus
         # 输入
