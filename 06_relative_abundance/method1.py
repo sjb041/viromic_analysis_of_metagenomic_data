@@ -200,7 +200,7 @@ def main():
     ]
 
     # votus 路径
-    votus = "/home/shijiabin/2025_2ME/03_virus_identification/methodA/votus.fna"
+    votus = "/home/shijiabin/2025_2ME/03_virus_identification/votus.fna"
 
     # reads 目录,该目录下的 reads 文件名格式为 sample_R1.fastq.gz, sample_R2.fastq.gz
     reads_dir = "/home/shijiabin/2025_2ME/01_raw_sequence_preprocessing/03_cleandata"
