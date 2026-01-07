@@ -12,7 +12,6 @@ import pandas as pd
 #       使用 bowtie2 比对每一对样本的 reads 到 votus,
 #       基因组长度归一化: count_per_bp = mapped_reads / genome_length,
 #       相对丰度计算: rel_abun = count_per_bp / sum(all_count_per_bp),
-#       汇总科水平相对丰度
 #   参考文献: The Chinese gut virus catalogue reveals gut virome diversity and disease-related viral signatures   
 # 
 # Dependencies:
