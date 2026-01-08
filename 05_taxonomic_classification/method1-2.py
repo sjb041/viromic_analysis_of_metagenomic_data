@@ -7,9 +7,10 @@
 # Description:
 #       Phage taxonomy annotation pipeline:
 #       Prodigal + vConTACT2 + geNomad
-#       1. 预测ORF (prodigal, -p meta)
-#       2. 预测出的蛋白序列输入 vcontact2
-#       3. 同一病毒簇中, 若含有参考数据库的序列, 则将该参考序列的分类信息分配给其他成员
+#       1. genomad 分类注释
+#       2. 预测ORF (prodigal, -p meta)
+#       3. 预测出的蛋白序列输入 vcontact2, 生成 viral clusters
+#       4. 根据 genomad 的注释信息和 viral clusters, 分配分类注释
 #   参考文献: 2025-Metagenomic analysis reveals gut phage diversity across three mammalian models
 # 
 # Dependencies:
@@ -21,6 +22,7 @@
 import os
 import pandas as pd
 import subprocess
+from pathlib import Path
 from contextlib import redirect_stdout
 
 ###################################### step1 genomad 分类注释 
@@ -36,11 +38,11 @@ def run_prodigal(input_virus, output_protein):
     subprocess.run(cmd, shell=True, check=True)
 
 ###################################### step3 运行 vcontact2, 生成 viral clusters (VCs)
-def run_vcontact2(input_protein, output_dir):
+def run_vcontact2(input_protein, output_dir, threads):
     os.makedirs(output_dir, exist_ok=True)
     g2g_file = f"{output_dir}/g2g.csv"
     cmd1 = f"micromamba run -n vc2 vcontact2_gene2genome -s 'Prodigal-FAA' -p {input_protein} -o {g2g_file}"
-    cmd2 = f"micromamba run -n vc2 vcontact2 --rel-mode 'Diamond' --db 'None' --pcs-mode MCL --vcs-mode ClusterONE --raw-proteins {input_protein} --proteins-fp {g2g_file} --output-dir {output_dir}"
+    cmd2 = f"micromamba run -n vc2 vcontact2 --rel-mode 'Diamond' --db 'None' --pcs-mode MCL --vcs-mode ClusterONE --raw-proteins {input_protein} --proteins-fp {g2g_file} --output-dir {output_dir} -t {threads}"
     subprocess.run(cmd1, shell=True, check=True)
     subprocess.run(cmd2, shell=True, check=True)
 
@@ -171,10 +173,10 @@ def main():
     完整分析流程
     """
     # votus 路径
-    votus = Path("/home/shijiabin/2025_2ME/03_virus_identification/methodA/votus.fna")
+    votus = Path("/home/shijiabin/2025_2ME/03_virus_identification/methodE/votus.fna")
 
     # genomad 数据库
-    db = Path("/home/shijiabin/db/genomad_db")
+    db = Path("/home/shijiabin/db/genomad_db/genomad_db_v1.9")
     
     # cpus
     threads = 10
@@ -184,9 +186,9 @@ def main():
     votus
     # 输出
     outdir_genomad = Path("01_genomad")
-    genomad_tax = output_dir_genomad / "votus_annotate/votus_taxonomy.tsv"
+    genomad_tax = outdir_genomad / "votus_annotate/votus_taxonomy.tsv"
 
-    run_genomad(input_votus, outdir_genomad, db)
+    run_genomad(votus, outdir_genomad, db, threads)
 
     #### step2 预测 ORF
     # 输入
@@ -204,7 +206,7 @@ def main():
     g2g = outdir_vcontact2 / "g2g.csv"
     overview = outdir_vcontact2 / "genome_by_genome_overview.csv"
     
-    run_vcontact2(protein, outdir_vcontact2)
+    run_vcontact2(protein, outdir_vcontact2, threads)
 
     ##### step4 分配分类信息
     # 输入
@@ -221,3 +223,5 @@ def main():
     #final_tax = f"votus_{method}/{sample}_taxonomy.tsv"
     #if os.path.exists(final_taxonomy):
         #subprocess.run(f"cp {final_taxonomy} {final_tax}", shell=True, check=True)
+if __name__ == "__main__":
+    main()
