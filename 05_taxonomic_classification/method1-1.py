@@ -1,0 +1,296 @@
+#!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+
+######################################
+# Date: 2026-01-08
+#
+# Description:
+#       Phage taxonomy annotation pipeline:
+#       Prodigal → vConTACT2 → taxonomy assignmen (ProkaryoticViralRefSeq211-Merged)
+#       1. 预测ORF (prodigal, -p meta)
+#       2. 预测出的蛋白序列输入 vcontact2
+#       3. 同一病毒簇中, 若含有参考数据库的序列, 则将该参考序列的分类信息分配给其他成员
+#   参考文献: 2024-The gut ileal mucosal virome is disturbed in patients with Crohn’sdiseaseand exacerbates intestinal inflammation in mice
+# 
+# Dependencies:
+#       prodigal --version
+#       vcontact2 --version    
+######################################
+
+import os
+import subprocess
+import pandas as pd
+import logging
+from pathlib import Path
+
+###################################### step1 预测 ORF
+def run_prodigal(votus_fa, protein_faa, log):
+    '''
+    预测 ORF, 使用 meta 模式
+    input:
+        votus_fa
+    output:
+        protein_faa, log
+    '''
+    os.makedirs(os.path.dirname(protein_faa), exist_ok=True)
+    os.makedirs(os.path.dirname(log), exist_ok=True)
+
+    cmd = ["prodigal", "-i", votus_fa, "-a", protein_faa, "-p", "meta"]
+
+    with open(log, "w") as lf:
+        subprocess.run(cmd, stdout=lf, stderr=lf, check=True)
+
+###################################### step2 运行 vcontact2, 生成 viral clusters (VCs)
+def run_vcontact2(protein_faa, db, outdir, g2g, log):
+    '''
+    运行 vcontact2, 生成 viral clusters (VCs)
+    input:
+        protein_faa
+    output:
+        g2g, genome_by_genome_overview, log
+    '''
+    os.makedirs(outdir, exist_ok=True)
+    os.makedirs(os.path.dirname(log), exist_ok=True)
+
+    with open(log, "w") as lf:
+        lf.write("===== vcontact2_gene2genome =====\n")
+
+        # 生成 g2g 文件
+        subprocess.run(
+            [
+                "vcontact2_gene2genome",
+                "-s", "Prodigal-FAA",
+                "-p", protein_faa,
+                "-o", g2g
+            ],
+            stdout=lf,
+            stderr=lf,
+            check=True
+        )
+
+        lf.write("\n===== vcontact2 clustering =====\n")
+
+        # 生成 viral clusters (VCs)
+        subprocess.run(
+            [
+                "vcontact2",
+                "--rel-mode", "Diamond",
+                "--db", db,
+                "--pcs-mode", "MCL",
+                "--vcs-mode", "ClusterONE",
+                "--raw-proteins", protein_faa,
+                "--proteins-fp", g2g,
+                "--output-dir", outdir
+            ],
+            stdout=lf,
+            stderr=lf,
+            check=True
+        )
+
+###################################### step3 分配分类信息
+# 设置日志记录器
+def setup_logger(log_file):
+    """设置日志记录器"""
+    # 清除现有的handlers
+    for handler in logging.root.handlers[:]:
+        logging.root.removeHandler(handler)
+    
+    # 配置新的日志
+    logging.basicConfig(
+        filename=str(log_file),
+        level=logging.INFO,
+        format='%(message)s',
+        force=True  # 覆盖之前的配置
+    )
+    return logging.getLogger()
+
+# 根据 vcontact2 的输入 g2g 文件和输出表格, 分配输入序列的分类等级
+def assign_taxonomy(g2g_file, overview_file, overview_filtered, final_tax, log_file):
+    """
+    基于vConTACT2聚类结果为目标序列分配病毒分类信息
+    
+    该函数通过分析vConTACT2生成的基因组概览文件,为目标序列(来自FASTA文件)分配
+    病毒分类信息。主要基于preVC科级别和VC属级别聚类结果,通过统计
+    参考序列的分类信息频数来推断目标序列的分类。
+    
+    参数:
+    g2g_file (str): vConTACT2的输入g2g文件,用于获取目标序列的序列名
+    overview_file (str): vConTACT2生成的genome_by_genome_overview.csv文件路径
+    output_overview_filtered (str): 输出筛选后的完整结果文件路径TSV格式
+    output_tax (str): 输出目标序列分类结果文件路径TSV格式,仅前7列
+    log_file (str): 日志文件路径,保存警告信息
+    
+    处理流程:
+    1. 从FASTA文件提取目标序列ID列表
+    2. 筛选overview文件,只保留同时包含目标序列和参考序列的preVC组
+    3. 为每个preVC组的目标序列分配分类信息:
+    - Family及以上级别:基于该组参考序列中出现频数最高的分类
+    - Genus级别:基于VC小组参考序列中出现频数最高的分类
+    """
+    os.makedirs(os.path.dirname(overview_filtered), exist_ok=True)
+    os.makedirs(os.path.dirname(final_tax), exist_ok=True)
+    os.makedirs(os.path.dirname(log_file), exist_ok=True)
+
+    # 设置日志记录器
+    logger = setup_logger(log_file)
+    
+    # 提取FASTA序列名
+    seqid_list = pd.read_csv(g2g_file)['contig_id'].unique().tolist()
+    # 读取overview文件
+    overview = pd.read_csv(overview_file)
+
+    ###### 筛选overview,只保留那些既有目标序列又有参考序列的preVC组
+    # 按照Excel的筛选步骤
+    # 1. 筛选那些目标序列preVC列不为空的行
+    df1 = overview[(overview['Genome'].isin(seqid_list)) & 
+                (overview['preVC'].notna()) & 
+                (overview['preVC'] != '')]
+
+    # 2. 使用1的preVC列筛选overview
+    preVC_list = list(df1['preVC'].unique())     # preVC列去重,转化为列表
+    df2 = overview[overview['preVC'].isin(preVC_list)]
+
+    # 3. 只保留那些既有目标序列又有参考序列的preVC组
+    # 找出满足条件的preVC组
+    preVC_with_both = []
+    for preVC in preVC_list:
+        group = df2[df2['preVC'] == preVC]
+        has_target = (group['Genome'].isin(seqid_list)).any()  # 组内是否有目标序列
+        has_reference = (~group['Genome'].isin(seqid_list)).any()  # 组内是否有参考序列  
+        # 只有当组内同时包含目标序列和参考序列时才保留该组
+        if has_target and has_reference:
+            preVC_with_both.append(preVC)
+    # 筛选preVC组
+    filtered_df = df2[df2['preVC'].isin(preVC_with_both)]
+
+    ###### 为每个目标序列分配Family和Genus信息
+    # Family分配：
+    # 对每个preVC组，统计参考序列中各Family的出现频数
+    # 排除'Unassigned'值
+    # 选择出现频数最高的Family作为该组目标序列的Family
+    # 如果有多个Family频数相同则报错
+    # Genus分配：
+    # 在preVC组内，根据VC进一步分组
+    # 排除'Unassigned'值
+    # 选择出现频数最高的Genus作为该VC小组目标序列的Genus
+    # 如果有多个Genus频数相同则报错
+    df = filtered_df.copy() 
+    # 按preVC组处理
+    for prevc in df['preVC'].unique():
+        group_mask = (df['preVC'] == prevc)
+        group_data = df[group_mask]
+        
+        # 获取参考序列用于Family分类
+        reference_mask = ~group_data['Genome'].isin(seqid_list)
+        reference_family_counts = group_data[reference_mask]['Family'].value_counts()
+        
+        # 移除'Unassigned'值
+        valid_families = reference_family_counts[reference_family_counts.index != 'Unassigned']
+        
+        if len(valid_families) > 0:
+            # 检查是否有多个最高频数
+            max_count = valid_families.max()
+            top_families = valid_families[valid_families == max_count]
+            
+            if len(top_families) > 1:
+                warning_msg = f"警告: preVC {prevc} 中存在多个相同频数的Family: {list(top_families.index)}, 使用第一个: {top_families.index[0]}"
+                print(warning_msg)
+                logger.warning(warning_msg)
+            
+            predicted_family = top_families.index[0]
+            
+            # 为该组所有目标序列填充Family及更高级分类
+            target_mask = group_mask & (df['Genome'].isin(seqid_list))
+            
+            # 填充Family及更高级分类信息
+            reference_taxonomy = group_data[reference_mask].iloc[0]  # 取第一个参考序列的分类信息作为模板
+            
+            df.loc[target_mask, 'Family'] = predicted_family
+            df.loc[target_mask, 'Order'] = reference_taxonomy['Order']
+            df.loc[target_mask, 'Class'] = reference_taxonomy['Class']
+            df.loc[target_mask, 'Phylum'] = reference_taxonomy['Phylum']
+            df.loc[target_mask, 'Kingdom'] = reference_taxonomy['Kingdom']
+            
+            # 按VC小组处理Genus
+            for vc in group_data['VC'].unique():
+                if pd.notna(vc):
+                    vc_mask = group_mask & (df['VC'] == vc)
+                    vc_group_data = df[vc_mask]
+                    
+                    # 获取参考序列用于Genus分类
+                    vc_reference_mask = ~vc_group_data['Genome'].isin(seqid_list)
+                    reference_genus_counts = vc_group_data[vc_reference_mask]['Genus'].value_counts()
+                    
+                    # 移除'Unassigned'值
+                    valid_genera = reference_genus_counts[reference_genus_counts.index != 'Unassigned']
+                    
+                    if len(valid_genera) > 0:
+                        # 检查是否有多个最高频数
+                        max_count = valid_genera.max()
+                        top_genera = valid_genera[valid_genera == max_count]
+
+                        if len(top_genera) > 1:
+                            warning_msg = f"警告: VC {vc} 中存在多个相同频数的Genus: {list(top_genera.index)}, 使用第一个: {top_genera.index[0]}"
+                            print(warning_msg)
+                            logger.warning(warning_msg)
+                        
+                        predicted_genus = top_genera.index[0]
+                        
+                        # 为该VC小组的所有目标序列填充Genus
+                        vc_target_mask = vc_mask & (df['Genome'].isin(seqid_list))
+                        df.loc[vc_target_mask, 'Genus'] = predicted_genus
+
+    # 只保留目标序列的分类结果，并且只保留前7列
+    target_classified = df[df['Genome'].isin(seqid_list)].iloc[:, :7]
+
+    # 保存结果
+    filtered_df.to_csv(overview_filtered, sep=',', index=False)
+    target_classified.to_csv(final_tax, sep=',', index=False)
+
+# =============================
+# Main Workflow
+# =============================
+
+def main():
+    """
+    完整分析流程
+    """
+    # votus 路径
+    votus = Path("/home/shijiabin/2025_2ME/03_virus_identification/methodA/votus.fna")
+
+    # vcontact2使用的数据库版本
+    db = "ProkaryoticViralRefSeq211-Merged"
+
+    ##### step1 预测 ORF
+    # 输入
+    votus
+    # 输出
+    protein = Path("01_prodigal/protein.faa")
+    log_prodigal = Path("00_log/prodigal.log")
+
+    run_prodigal(votus, protein, log_prodigal)
+
+    ##### step2 运行 vcontact2, 生成 viral clusters (VCs)
+    # 输入
+    protein
+    # 输出
+    outdir_vcontact2 = Path("02_vcontact2")
+    g2g = outdir_vcontact2 / "g2g.csv"
+    overview = outdir_vcontact2 / "genome_by_genome_overview.csv"
+    log_vcontact2 = Path("00_log/vcontact2.log")
+
+    run_vcontact2(protein, db, outdir_vcontact2, g2g, log_vcontact2)
+
+    ##### step3 分配分类信息
+    # 输入
+    g2g
+    overview
+    # 输出
+    overview_filtered = outdir_vcontact2 / "overview_filtered.csv"
+    final_tax = Path("03_tax/votus_taxonomy.csv")
+    log_assign = Path("00_log/assign.log")
+
+    assign_taxonomy(overview, g2g, overview_filtered, final_tax, log_assign)
+
+if __name__ == "__main__":
+    main()
