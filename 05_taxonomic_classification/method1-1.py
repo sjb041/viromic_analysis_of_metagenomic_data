@@ -387,7 +387,7 @@ def main():
     protein = Path("01_prodigal/protein.faa")
     log_prodigal = Path("00_log/prodigal.log")
 
-    #run_prodigal(votus, protein, log_prodigal)
+    run_prodigal(votus, protein, log_prodigal)
 
     ##### step2 运行 vcontact2, 生成 viral clusters (VCs)
     # 输入
@@ -398,7 +398,7 @@ def main():
     overview = outdir_vcontact2 / "genome_by_genome_overview.csv"
     log_vcontact2 = Path("00_log/vcontact2.log")
 
-    #run_vcontact2(protein, db, outdir_vcontact2, g2g, log_vcontact2, threads)
+    run_vcontact2(protein, db, outdir_vcontact2, g2g, log_vcontact2, threads)
 
     ##### step3 分配分类信息
     # 输入
@@ -406,19 +406,19 @@ def main():
     overview
     # 输出
     overview_filtered = outdir_vcontact2 / "overview_filtered.csv"
-    final_tax = Path("03_tax/votus_taxonomy.csv")
+    tax_assign = Path("03_tax/votus_taxonomy.csv")
     log_assign = Path("00_log/assign.log")
 
-    assign_taxonomy(g2g, overview, overview_filtered, final_tax, log_assign)
+    assign_taxonomy(g2g, overview, overview_filtered, tax_assign, log_assign)
 
     ##### step4 优化分类注释表
     # 输入
     votus
-    final_tax
+    tax_assign
     # 输出
-    output_tax_file = Path("votus_taxonomy.tsv")
+    final_tax = Path("votus_taxonomy.tsv")
 
-    optimize_annotation_table(votus, final_tax, output_tax_file)
+    optimize_annotation_table(votus, tax_assign, final_tax)
 
 if __name__ == "__main__":
     main()
