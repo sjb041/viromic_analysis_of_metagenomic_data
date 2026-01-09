@@ -180,7 +180,7 @@ def normalize_taxonomy(row, tax_cols):
         * 若本层有值 → 保留
     """
 
-    invalid_values = {None, "", "Unknown", "Unassigned"}
+    invalid_values = {None, "", "Unknown", "unknown", "Unclassified", "unclassified", "Unassigned", "unassigned"}
 
     for i, col in enumerate(tax_cols):
         val = row[col]
