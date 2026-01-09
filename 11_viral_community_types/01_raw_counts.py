@@ -104,7 +104,7 @@ def main():
         file_list.append(raw_counts_file)
 
     # 合并 votus 在各个样本下的 raw_counts    
-    merge_raw_counts(file_list, "votu_raw_counts.tsv")
+    merge_raw_counts(file_list, f"{dir}/votu_raw_counts.tsv")
 
 if __name__ == "__main__":
     main()
