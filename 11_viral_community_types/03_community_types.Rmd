@@ -86,7 +86,7 @@ library(readr)
 library(WriteXLS)
 library(readxl)
 library(remotes)
-library(devtools)
+#library(devtools)
 library(BiocManager)
 library(ComplexHeatmap)
 library(phyloseq)
@@ -94,19 +94,19 @@ library(ALDEx2)
 library(RSQLite)
 library(RcppArmadillo)
 library(DESeq2)
-library(microbiomeMarker)
+#library(microbiomeMarker)
 library(vegan)
 library(dendsort)
 library(ape)
 library(seriation)
 library(taxonomizr)
 library(esquisse)
-library(tidyverse)
+#library(tidyverse)
 library(grid)
 library(coin)
-library(rstatix)
+#library(rstatix)
 library(PMCMR)
-library(biotyper)
+#library(biotyper)
 library(DirichletMultinomial)
 library(shiny)
 library (fpc)
@@ -121,6 +121,7 @@ getwd()
 
 # 如果需要，可以改变工作目录
 setwd("/home/shijiabin/2025_2ME/11_viral_community_types")
+getwd()
 ```
 
 ```{r}
@@ -178,18 +179,22 @@ Mastertable$Genus <- NULL
 colnames(Mastertable)[which(names(Mastertable) == "Genus_like_groups")] <- "Genus"
 
 # 将 votu 列的值赋给 Species 列, 补充 Species 列
-Mastertable$Species <- Mastertable$vOTU
+#Mastertable$Species <- Mastertable$vOTU
 ```
 
 ```{r}
 # 1.5.1 Create a matrix of abundance and taxonomy tables
 ####################################
-# 提取丰度列然后创建矩阵 (倒数第3列~倒数第19列)
-abundance_table_rarefied <- Mastertable[, (ncol(Mastertable)-18):(ncol(Mastertable)-2)]
+# 提取丰度列然后创建矩阵
+abundance_table_rarefied <- Mastertable[, grep("^raw_counts_", colnames(Mastertable))]
 abundance_table_rarefied_m <- as.matrix(abundance_table_rarefied)
 
-# 提取分类列然后创建矩阵 (2~6列+最后两列)
-taxonomy_table_rarefied <- Mastertable[, c(2:5, (ncol(Mastertable)-1):ncol(Mastertable))]
+# 提取分类列然后创建矩阵 
+target_cols <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Subfamily", "Genus", "Species")
+valid_cols <- target_cols[target_cols %in% colnames(Mastertable)]
+taxonomy_table_rarefied <- Mastertable[, valid_cols]
+# 显示最终的列名
+cat("实际存在的列:", paste(colnames(taxonomy_table_rarefied), collapse = ", "), "\n")
 taxonomy_table_rarefied_m <- as.matrix(taxonomy_table_rarefied)
 
 # 创建 sample_data
@@ -565,5 +570,33 @@ pcoa_plot_ <- plot_ordination(
   stat_ellipse(aes(group = cluster), type = 't', size = 1, linetype = 2, level = 0.95)
 
 plot(pcoa_plot_)
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
+
+```
+
+```{r}
 
 ```
