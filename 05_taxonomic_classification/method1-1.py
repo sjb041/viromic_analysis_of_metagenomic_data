@@ -2,11 +2,11 @@
 # -*- coding: utf-8 -*-
 
 ######################################
-# Date: 2026-01-09
+# Date: 2026-01-010
 #
 # Description:
 #       Phage taxonomy annotation pipeline:
-#       Prodigal → vConTACT2 → taxonomy assignmen (ProkaryoticViralRefSeq211-Merged)
+#       Prodigal → vConTACT2 (ProkaryoticViralRefSeq211-Merged) → taxonomy assignmen
 #       1. 预测ORF (prodigal, -p meta)
 #       2. 预测出的蛋白序列输入 vcontact2
 #       3. 同一病毒簇中, 若含有参考数据库的序列, 则将该参考序列的分类信息分配给其他成员
