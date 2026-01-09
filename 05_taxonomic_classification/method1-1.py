@@ -304,7 +304,7 @@ def optimize_annotation_table(fasta_file, tax_file, output_tax_file):
 
     以 FASTA 文件中的 Genome ID 为全集，对现有注释表进行补全：
     - FASTA 中存在但注释表中缺失的 Genome 会被补充为新行
-    - 新增行的分类信息 Kingdom~Genus 为空
+    - 新增行的分类信息为空
     - 已有注释信息保持不变
 
     提取第一列和 Kingdom~Species 之间的列(要找到这两个列名然后提取他们两以及之间的列)
