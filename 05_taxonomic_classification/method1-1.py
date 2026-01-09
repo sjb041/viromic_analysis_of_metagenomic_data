@@ -2,7 +2,7 @@
 # -*- coding: utf-8 -*-
 
 ######################################
-# Date: 2026-01-010
+# Date: 2026-01-10
 #
 # Description:
 #       Phage taxonomy annotation pipeline:
