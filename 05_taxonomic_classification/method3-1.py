@@ -30,6 +30,7 @@ import pandas as pd
 import logging
 from pathlib import Path
 from Bio import SeqIO
+import shutil
 
 ###################################### step0 配置数据库
 def setup_virushostdb(virushostdb_dir, virushostdb_path, release = "release229", release_date = "2025-06-03"):
@@ -134,6 +135,60 @@ def run_prodigal(input_virus, output_protein):
     os.makedirs(os.path.dirname(output_protein), exist_ok=True)
     cmd = f"prodigal -i {input_virus} -a {output_protein} -p meta"
     subprocess.run(cmd, shell=True, check=True)
+
+
+###################################### step3 蛋白去冗余
+def run_mmseqs_linclust_protein(protein_fasta, out_dir, prefix_name, tmp_dir):
+    """
+    Run MMseqs2 easy-linclust for protein clustering and extract non-redundant proteins.
+
+    Parameters
+    ----------
+    protein_fasta : Path
+        Input protein FASTA file.
+    out_dir : Path
+        Output directory for MMseqs2 results.
+    prefix_name : str
+        Prefix name for MMseqs2 outputs.
+    tmp_dir : Path
+        Temporary directory for MMseqs2.
+    """
+
+    protein_fasta = Path(protein_fasta)
+    out_dir = Path(out_dir)
+    tmp_dir = Path(tmp_dir)
+
+    prefix = out_dir / prefix_name
+    rep_seq = out_dir / f"{prefix_name}_rep_seq.fasta"
+    nonredundant_protein = out_dir / "nonredundant_protein.faa"
+
+    # 创建输出目录
+    out_dir.mkdir(parents=True, exist_ok=True)
+
+    # MMseqs2 clustering
+    cmd = ["mmseqs", "easy-linclust",
+            str(protein_fasta),
+            str(prefix),
+            str(tmp_dir),
+            "--min-seq-id", "0.9", 
+            "--cov-mode", "1", 
+            "-c", "0.8", 
+            "--kmer-per-seq", "80"]
+
+    subprocess.run(cmd, check=True)
+
+    # 重命名代表序列为 nonredundant_protein.faa
+    if not rep_seq.exists():
+        raise FileNotFoundError(f"Expected MMseqs output not found: {rep_seq}")
+
+    rep_seq.rename(nonredundant_protein)
+
+    # 清理临时目录
+    if tmp_dir.exists():
+        shutil.rmtree(tmp_dir)
+
+    return nonredundant_protein
+
 # 选择最佳匹配 ()
 def select_best_matches(input_file_path, output_path):
     """
@@ -436,26 +491,9 @@ def main():
     protein
     # 输出
     dir_mmseqs = Path("03_mmseqs2")
-    prefix = dir_mmseqs / "protein" 
-    rep_seq = dir_mmseqs / f"{prefix.name}_rep_seq.fasta"
     nonredundant_protein = dir_mmseqs / "nonredundant_protein.faa"
 
-    os.makedirs(dir_mmseqs, exist_ok=True)
-    
-    cmd1 = ["mmseqs", "easy-linclust", 
-           str(protein), 
-           str(prefix), 
-           "tmp_mmseqs", 
-           "--min-seq-id", "0.9", 
-           "--cov-mode", "1", 
-           "-c", "0.8", 
-           "--kmer-per-seq", "80"]
-    subprocess.run(cmd1, check=True)
-
-    cmd2 = ["mv", str(rep_seq), str(nonredundant_protein)]
-    subprocess.run(cmd2, check=True)
-    cmd3 = ["rm", "-r", "tmp_mmseqs"]
-    subprocess.run(cmd3, check=True)
+    run_mmseqs_linclust_protein(protein, dir_mmseqs, "protein", "tmp_dir")
 
 if __name__ == "__main__":
     main()
