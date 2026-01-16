@@ -2,27 +2,34 @@
 # -*- coding: utf-8 -*-
 
 ######################################
-# Date: 2026-01-15
+# Date: 2026-01-17
 #
 # Description:
 #       Phage taxonomy annotation pipeline:
-#       votus → Prodigal → DIAMOND (Virus-Host DB, release229_2025-06-03) → taxonomy assignmen
+#       votus → Prodigal → DIAMOND (Virus-Host DB, release229) → taxonomy assignmen
 #         ↓
 #       genomad
-#       1. 
-#       2. 
+#       1. genomad 分类注释
+#       2. 预测 ORF
+#       3. 蛋白去冗余
+#       4. 非冗余蛋白比对到 Virus-Host DB
+#       5. 基于diamond结果分配科分类和完整分类
+#       6. 合并基于diamond的分类信息和基于genomad的分类信息
 #   参考文献: 2025-The Chinese gut virus catalogue reveals gut virome diversity and disease-related viral signatures
 #
 # Dependencies:
+#       geNomad --version 1.11.2
 #       prodigal --version 2.6.3
-#       vcontact2 --version 0.11.3
+#       MMseqs2 Version: bd01c2229f027d8d8e61947f44d11ef1a7669212 
+#       diamond --version 2.0.6
 
 ##### 待改进部分：
-# 1. 是否需要选择最佳匹配？但是原文中设置了diamond --max-target-seqs 10,所以不需要选择最佳匹配?
+# 1. 是否需要选择最佳匹配？但是原文中设置了diamond --max-target-seqs 10,所以不需要选择最佳匹配? (目前不选择最佳匹配)
 #    事实上,如果选择最佳匹配,不必自定义一个函数,只需 --max-target-seqs 1 即可
-#    建议参考代码 https://github.com/RChGO/VMGC/blob/main/Pipelines/virusTaxAnno.sh
-# 2. 真的需要蛋白质去冗余吗?
-# 3. genomad使用 --lenient-taxonomy 分类到科级以下的分类单元
+#    建议参考代码 https://github.com/RChGO/VMGC/blob/main/Pipelines/virusTaxAnno.sh (此脚本未参考)
+# 2. 真的需要蛋白质去冗余吗? (目前去冗余)
+# 3. genomad使用 --lenient-taxonomy 分类到科级以下的分类单元 (已使用)
+# 4. 未按 lineage 分离各等级, 未优化各等级的 Unclassified 注释
 
 import os
 import subprocess
@@ -31,98 +38,6 @@ import logging
 from pathlib import Path
 from Bio import SeqIO
 import shutil
-
-###################################### step0 配置数据库
-def setup_virushostdb(virushostdb_dir, virushostdb_path, release = "release229", release_date = "2025-06-03"):
-    """
-    Download and configure Virus-Host DB (KEGG) and build DIAMOND database.
-
-    Parameters
-    ----------
-    virushostdb_dir : str
-        Directory to store Virus-Host DB
-    virushostdb_path : str
-        Path to DIAMOND database prefix
-    release : str
-        Virus-Host DB release version
-    release_date : str
-        Release date for logging
-    """
-
-    flag_file = os.path.join(virushostdb_dir, "virushostdb_configured")
-
-    # 1. Skip if already configured
-    if os.path.isfile(flag_file):
-        print(
-            f"Virus-Host DB 数据库已配置, 位于 {virushostdb_path}, 跳过下载和处理步骤\n"
-        )
-        return
-
-    print(
-        f"正在配置 Virus-Host DB 数据库, 当前使用的版本是 {release} ({release_date})...\n"
-    )
-
-    os.makedirs(virushostdb_dir, exist_ok=True)
-
-    def run(cmd):
-        print(f"[CMD] {cmd}")
-        subprocess.run(cmd, shell=True, check=True)
-
-    os.chdir(virushostdb_dir)
-
-    # 2. Download database files
-    base_url = f"https://www.genome.jp/ftp/db/virushostdb/old/{release}"
-
-    run(f'wget "{base_url}/virushostdb.tsv"')
-    run(f'wget "{base_url}/virus_genome_type.tsv"')
-    run(f'wget "{base_url}/virushostdb.cds.faa.gz"')
-
-    # 3. Build DIAMOND database
-    run("gunzip -f virushostdb.cds.faa.gz")
-    run(f"diamond makedb --in virushostdb.cds.faa --db {virushostdb_path}")
-
-    # 4. Process taxonomy / host mapping tables
-    run(
-        "cut -f 1,2,3,4 virushostdb.tsv | sort -r | uniq > virushostdb_nonredundant.tsv"
-    )
-
-    run(
-        "awk -F'\t' -v OFS='\t' "
-        "'{print $1, $4, $18, $15, $5, $7, $8, $10, $11, $12}' "
-        "virus_genome_type.tsv > tmp"
-    )
-
-    run("head -n1 virushostdb_nonredundant.tsv > header1")
-    run("tail -n +2 virushostdb_nonredundant.tsv | sort -k1,1 > sorted1")
-    run("head -n1 tmp > header2")
-    run("tail -n +2 tmp | sort -k1,1 > sorted2")
-
-    run("cut -f2- header2 | paste header1 - > final_header")
-    run("join -t $'\\t' -1 1 -2 1 -a 1 sorted1 sorted2 > joined_data")
-    run("cat final_header joined_data > final_tax.tsv")
-
-    run(
-        "awk 'BEGIN {FS=OFS=\"\\t\"} NR>1 {"
-        "split($4, refseqs, \",\"); "
-        "for(i in refseqs) {"
-        "gsub(/^[ \\t]+|[ \\t]+$/, \"\", refseqs[i]); "
-        "print refseqs[i], $11, $3"
-        "}}' final_tax.tsv > refseq_family.tsv"
-    )
-
-    run(
-        "awk 'BEGIN {FS=OFS=\"\\t\"} {if($2 == \"\") $2=\"Unclassified\"} 1' "
-        "refseq_family.tsv | sort | uniq > tmp && mv tmp refseq_family.tsv"
-    )
-
-    run(
-        "rm -f header1 sorted1 header2 sorted2 final_header joined_data"
-    )
-
-    # 5. Mark as configured
-    open(flag_file, "w").close()
-
-    print("\nVirus-Host DB 配置完毕\n")
 
 ###################################### step1 genomad 分类注释 
 def run_genomad(input_virus, output_dir, db, threads):
@@ -189,7 +104,38 @@ def run_mmseqs_linclust_protein(protein_fasta, out_dir, prefix_name, tmp_dir):
 
     return nonredundant_protein
 
-# 选择最佳匹配 ()
+###################################### step4 非冗余蛋白比对到 Virus-Host DB
+def run_diamond(protein_fasta, db, diamond_results):
+    """
+    protein_fasta: 输入的蛋白序列
+    db: 数据库前缀, 不带 .dmnd
+    diamond_results: 结果
+    """
+    # 创建输出目录
+    os.makedirs(os.path.dirname(diamond_results), exist_ok=True)
+
+    # 构建 .dmnd
+    dmnd_file = Path(f"{db}.dmnd")
+    if not dmnd_file.exists():
+        makedb_cmd = ["diamond", "makedb",
+                    "--in", str(db),
+                    "--db", str(db)]
+        subprocess.run(makedb_cmd, check=True)
+
+    cmd = ["diamond", "blastp",
+            "-q", str(protein_fasta),
+            "-d", str(db),
+            "-o", str(diamond_results),
+            "--id", "30",
+            "--query-cover", "50",
+            "--min-score", "50",
+            "--max-target-seqs", "10",
+            "--outfmt", "6", "qseqid", "stitle", "pident", "length", "evalue", "bitscore"]
+
+    subprocess.run(cmd, check=True)
+
+###################################### step5 基于diamond结果分配科分类和完整分类
+# 选择最佳匹配 (实际不使用)
 def select_best_matches(input_file_path, output_path):
     """
     选出相同查询序列的最佳匹配, 即 bitscore(最后一列的值)最高的那一行
@@ -294,6 +240,7 @@ def format_diamond_results(diamond_results_path, output_path):
                 modified_lines.append(modified_line)
     
     # 输出新文件(如果所有行都有效)
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     if is_valid:
         try:
             with open(output_path, 'w', encoding='utf-8') as f:
@@ -328,6 +275,7 @@ def merge_diamond_refseq(refseq_family_path, diamond_results_processed_path, out
         return False
 
     # 处理文件diamond_results_processed_path并写入结果
+    os.makedirs(os.path.dirname(output_path), exist_ok=True)
     try:
         with open(diamond_results_processed_path, 'r', encoding='utf-8') as f1, \
                 open(output_path, 'w', encoding='utf-8') as out:
@@ -439,6 +387,7 @@ def assign_family_classification(merged_file_path, output_path):
             })
         
         # 写入结果
+        os.makedirs(os.path.dirname(output_path), exist_ok=True)
         with open(output_path, 'w', encoding='utf-8') as f_out:
             # 写入表头
             f_out.write('QueryID\tfamily\tlineage\n')
@@ -464,10 +413,12 @@ def main():
 
     # 数据库
     db_dir = Path("/home/shijiabin/db")
-    genomad_db_path = db_dir / "genomad_db"
-    virushostdb_dir = db_dir / "virushostdb_release229_2025-06-03"
-    virushostdb_path = virushostdb_dir / "virushostdb"
-    refseq_family_path = virushostdb_dir / "refseq_family.tsv"
+    genomad_db_path = db_dir / "genomad_db" / "genomad_db_v1.9"
+    virushostdb_dir = db_dir / "virushostdb_release229"
+    virushostdb_path = virushostdb_dir / "virushostdb.cds.faa"
+    refseq_family_path = virushostdb_dir / "refseq2family.tsv"
+
+    threads = 10
 
     #### step1 genomad 分类注释
     # 输入
@@ -493,7 +444,57 @@ def main():
     dir_mmseqs = Path("03_mmseqs2")
     nonredundant_protein = dir_mmseqs / "nonredundant_protein.faa"
 
-    run_mmseqs_linclust_protein(protein, dir_mmseqs, "protein", "tmp_dir")
+    #run_mmseqs_linclust_protein(protein, dir_mmseqs, "protein", "tmp_dir")
+
+    #### step4 非冗余蛋白比对到 Virus-Host DB
+
+    # 非冗余蛋白比对到Virus-Host DB
+    # input
+    nonredundant_protein
+    # output
+    diamond_results = Path("04_diamond/diamond_results.tsv")
+
+    #run_diamond(nonredundant_protein, virushostdb_path, diamond_results)
+
+    #### step5 基于diamond结果分配科分类和完整分类
+    # input
+    diamond_results
+    # output
+    diamond_format = Path("04_diamond/diamond_results_format.tsv")
+    merged_file_path = Path("05_diamond_classification/merge.tsv")
+    diamond_classification = Path("05_diamond_classification/classification.tsv")
+
+    # 格式化 diamond 结果
+    #format_diamond_results(diamond_results, diamond_format)
+    # 合并 diamond 结果和 refseq 分类信息
+    #merge_diamond_refseq(refseq_family_path, diamond_format, merged_file_path)
+    # 分配科分类和完整分类
+    #assign_family_classification(merged_file_path, diamond_classification)
+
+    #### step6 合并基于diamond的分类信息和基于genomad的分类信息
+    # input:
+    diamond_classification
+    genomad_tax
+    # output:
+    merged_path = Path("06_merged_classification/merge_diamond_genomad.tsv")
+
+    # 读取两个TSV文件（带表头）
+    diamond_classification = pd.read_csv(diamond_classification, sep='\t', header=0)
+    genomad_tax = pd.read_csv(genomad_tax, sep='\t', header=0)
+
+    # 删除 genomad_tax 的 n_genes_with_taxonomy 列，agreement 列，taxid 列
+    genomad_tax = genomad_tax.drop(columns=['n_genes_with_taxonomy', 'agreement', 'taxid'])
+
+    # 重命名第一列的列名为 vOTU, 以便直接合并
+    diamond_classification = diamond_classification.rename(columns={diamond_classification.columns[0]: 'vOTU'})
+    genomad_tax = genomad_tax.rename(columns={genomad_tax.columns[0]: 'vOTU'})
+
+    # 使用 outer 连接合并两个表格
+    merged_classification = pd.merge(diamond_classification, genomad_tax, on='vOTU', how='outer', suffixes=('_diamond', '_genomad'))
+
+    # 保存合并结果（保留表头）
+    os.makedirs(os.path.dirname(merged_path), exist_ok=True)
+    merged_classification.to_csv(merged_path, sep='\t', index=False)
 
 if __name__ == "__main__":
     main()
