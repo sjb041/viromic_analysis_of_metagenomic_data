@@ -1,7 +1,7 @@
 #!/bin/bash
 
 ##################################################
-# Prodigal + DIAMOND + [Virus-Host DB(release207,2021-10-07) + crAss-like噬菌体蛋白 + Benler研究的蛋白目录]
+# Prodigal + DIAMOND + [Virus-Host DB(release205) + crAss-like噬菌体蛋白 + Benler研究的蛋白目录]
 # 处理任意病毒序列文件
 
 # 参考文献: A multi-kingdom collection of 33,804 reference genomes for the human vaginal microbiome
@@ -24,7 +24,12 @@ db_tax=$4                  # 蛋白质序列数据库分类信息
 threads=$5                 # 使用的线程数
 
 # 添加依赖脚本的父目录到PATH
-export PATH=/home/shijiabin/2025_2ME/bin/VMGCPipelines:$PATH
+# 获取当前脚本所在的绝对目录
+SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
+
+# 将脚本所在目录加入 PATH
+export PATH="${SCRIPT_DIR}:$PATH"
+
 
 #### 基于蛋白序列的科水平注释
 
