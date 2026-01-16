@@ -409,7 +409,7 @@ def main():
     完整分析流程
     """
     # votus 路径
-    votus = Path("/home/shijiabin/2025_2ME/03_virus_identification/methodA/votus.fna")
+    votus = Path("/home/shijiabin/2025_2ME/03_virus_identification/votus.fna")
 
     # 数据库
     db_dir = Path("/home/shijiabin/db")
@@ -427,7 +427,7 @@ def main():
     outdir_genomad = Path("01_genomad")
     genomad_tax = outdir_genomad / "votus_annotate/votus_taxonomy.tsv"
 
-    #run_genomad(votus, outdir_genomad, genomad_db_path, threads)
+    run_genomad(votus, outdir_genomad, genomad_db_path, threads)
 
     #### step2 预测 ORF
     # 输入
@@ -435,7 +435,7 @@ def main():
     # 输出
     protein = Path("02_prodigal/protein.faa")
 
-    #run_prodigal(votus, protein)
+    run_prodigal(votus, protein)
     
     #### step3 蛋白去冗余
     # 输入
@@ -444,7 +444,7 @@ def main():
     dir_mmseqs = Path("03_mmseqs2")
     nonredundant_protein = dir_mmseqs / "nonredundant_protein.faa"
 
-    #run_mmseqs_linclust_protein(protein, dir_mmseqs, "protein", "tmp_dir")
+    run_mmseqs_linclust_protein(protein, dir_mmseqs, "protein", "tmp_dir")
 
     #### step4 非冗余蛋白比对到 Virus-Host DB
 
@@ -454,7 +454,7 @@ def main():
     # output
     diamond_results = Path("04_diamond/diamond_results.tsv")
 
-    #run_diamond(nonredundant_protein, virushostdb_path, diamond_results)
+    run_diamond(nonredundant_protein, virushostdb_path, diamond_results)
 
     #### step5 基于diamond结果分配科分类和完整分类
     # input
@@ -465,11 +465,11 @@ def main():
     diamond_classification = Path("05_diamond_classification/classification.tsv")
 
     # 格式化 diamond 结果
-    #format_diamond_results(diamond_results, diamond_format)
+    format_diamond_results(diamond_results, diamond_format)
     # 合并 diamond 结果和 refseq 分类信息
-    #merge_diamond_refseq(refseq_family_path, diamond_format, merged_file_path)
+    merge_diamond_refseq(refseq_family_path, diamond_format, merged_file_path)
     # 分配科分类和完整分类
-    #assign_family_classification(merged_file_path, diamond_classification)
+    assign_family_classification(merged_file_path, diamond_classification)
 
     #### step6 合并基于diamond的分类信息和基于genomad的分类信息
     # input:
