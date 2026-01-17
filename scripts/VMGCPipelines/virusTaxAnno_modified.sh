@@ -33,7 +33,7 @@ export PATH="${SCRIPT_DIR}:$PATH"
 
 #### 基于蛋白序列的科水平注释
 
-# 使用diamond进行blastp比对，比对蛋白质序列到蛋白质数据库
+# 使用diamond进行blastp比对，比对蛋白质序列到蛋白质数据库 (db是.faa文件,会临时建库)
 diamond blastp --threads $threads --max-target-seqs 10 --db $db --query $prot --outfmt 6 --out $outf.pep.bt --quiet
 
 # 整理diamond比对结果中的TargetID
