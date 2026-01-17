@@ -40,7 +40,7 @@ def run_virify(virify_path, votus_fa, out_dir, viphog_version, meta_version, db_
 
     subprocess.run(cmd, check=True)
 
-###################################### step2 运行 优化分类注释表
+###################################### step2 优化分类注释表
 # 修改列名
 def modify_column_names(tax_file, output_tax_file):
     """
