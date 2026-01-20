@@ -1,0 +1,347 @@
+---
+title: "04_bray_curtis_dissimilarity_visualization"
+output: html_document
+---
+```{r}
+# 安装 R 包
+micromamba create -n r r-base=4.3.0 bioconductor-microbiomemarker bioconductor-deseq2 
+micromamba activate r
+
+micromamba install r-devtools r-biotyper r-reshape r-writexls r-dendsort r-seriation \
+                   r-taxonomizr r-esquisse r-tidyverse r-rstatix r-PMCMR r-clValid \
+                   r-philentropy bioconductor-microbiome r-RcppArmadillo=0.9.900.3.0 -y
+```
+
+```{r}
+library(ggplot2)
+library(dplyr)
+library(plyr)
+library(reshape)
+library(reshape2)
+library(scales)
+library(viridis)
+library(readr)
+library(WriteXLS)
+library(readxl)
+library(remotes)
+library(devtools)
+library(BiocManager)
+library(ComplexHeatmap)
+library(phyloseq)
+library(ALDEx2)
+library(RSQLite)
+library(RcppArmadillo)
+library(DESeq2)
+library(microbiomeMarker)
+library(vegan)
+library(dendsort)
+library(ape)
+library(seriation)
+library(taxonomizr)
+library(esquisse)
+library(tidyverse)
+library(grid)
+library(coin)
+library(rstatix)
+library(PMCMR)
+library(BiotypeR)
+library(DirichletMultinomial)
+library(shiny)
+library(fpc)
+library(clValid)
+library(cluster) 
+library(philentropy)
+```
+
+```{r}
+# 检查当前工作目录
+getwd()
+# 如果需要，可以改变工作目录
+setwd("/home/shijiabin/2025_2ME/11_viral_community_types/A")
+getwd()
+```
+
+```{r}
+# 读取合并肠型分析结果的 phyloseq 对象
+phyloseq_rarefied_phages_visualization_1 <- readRDS("03_community_types/phyloseq_rarefied_phages_visualization_1.rds")
+```
+```{r}
+#################################### 1 数据预处理 ####################################
+# Phyloseq: phyloseq_rarefied_phages_transformed
+# Bray-curtis data: phyloseq_rarefied_phages_transformed_bray
+# Ordinationation: phyloseq_rarefied_phages_PcoA
+###################################
+
+# 2.5.1 Remove samples for which no community-type can be assigned
+###################################
+# Remove NA's for clusters 
+phyloseq_rarefied_phages_visualization_2 = subset_samples(phyloseq_rarefied_phages_visualization_1, !cluster == "NA")
+###################################
+
+# 2.5.2 Transform count (log10)
+###################################
+# I use a log10 transformation for the simple fact that I observed before that taxa that are less abundant or often lysogenic phages
+# These are more shared and less abundant than lytic taxa. I don't want to underepresent these so log10 transformation
+# 使用log10转换是因为观察到丰度较低的类群（通常是溶原性噬菌体）比裂解性噬菌体更共享但丰度更低，对数转换可以避免低估这些类群
+# You could also opt for other transformation (eg. Hellinger transformation is famous one givin more weight to low-abundant taxa)
+# 也可以选择其他转换方法（如Hellinger转换，对低丰度类群给予更多权重）
+phyloseq_rarefied_phages_transformed = transform_sample_counts(phyloseq_rarefied_phages_visualization_2, function(x) log(10 + x))
+#phyloseq_rarefied_phages_hellinger = transform_sample_counts(phyloseq_rarefied_phages_visualization_2, "hellinger")
+###################################
+
+# 2.5.3 Bray-curtis dissimmilarities 计算 Bray-Curtis 相似性
+###################################
+phyloseq_rarefied_phages_transformed_bray <- phyloseq::distance(phyloseq_rarefied_phages_transformed, method="bray")
+###################################
+
+# 2.5.4 Reduce dimensionality and plot virome composition on PcoA
+###################################
+phyloseq_rarefied_phages_PcoA <- ordinate(phyloseq_rarefied_phages_transformed, method="PCoA", distance=phyloseq_rarefied_phages_transformed_bray)
+# 使用 ordinate() 函数进行排序分析
+# 方法选择 "PCoA"（主坐标分析）
+# 使用前面计算的 Bray-Curtis 距离矩阵作为距离参数
+# 用于降低数据维度并可视化噬菌体群落组成
+#View(sample_data(phyloseq_rarefied_phages_transformed))
+###################################
+
+# 2.6 group 处理
+###################################
+metadata_begin <- as.data.frame(sample_data(phyloseq_rarefied_phages_transformed))
+
+# group 处理
+metadata_begin$group <- as.character(metadata_begin$group)
+metadata_begin$group <- factor(metadata_begin$group, levels = c("F1","F2","FG","L1","L2","H"))
+
+# <<< FIX: 确保 cluster 是 factor
+metadata_begin$cluster <- factor(metadata_begin$cluster)
+
+# 再合并回 phyloseq
+metadata_begin_ <- sample_data(metadata_begin)
+phyloseq_rarefied_phages_transformed <- merge_phyloseq(metadata_begin_, phyloseq_rarefied_phages_transformed)
+```
+
+```{r}
+#################################### 2 组间中心距离 PCoA ####################################
+# 把 R² 和 P 值直接标注到 PCoA 图上
+# 把“组中心”直接画到 pcoa1 图上
+###################################
+# 1. 用 Bray–Curtis 距离做 PERMANOVA
+# 2. 提取 R² 和 P 值
+# 3. 用 annotate() 或 labs(subtitle=) 直接标注到 PCoA1 图 上
+
+# 检验 group 是否显著解释群落差异
+# PERMANOVA
+## 从 phyloseq 提取 metadata（强制 base data.frame）
+meta_df <- data.frame(
+  sample_data(phyloseq_rarefied_phages_transformed),
+  check.names = FALSE
+)
+## 确保 group 是 factor，顺序与你作图一致
+meta_df$group <- factor(
+  meta_df$group,
+  levels = c("F1","F2","FG","L1","L2","H")
+)
+adon_group <- adonis2(
+  phyloseq_rarefied_phages_transformed_bray ~ group,
+  data = meta_df,
+  permutations = 999
+)
+
+# 提取 R² 和 P 值（用于标注）：
+R2 <- adon_group$R2[1]
+P  <- adon_group$`Pr(>F)`[1]
+
+adon_label <- paste0(
+  "PERMANOVA (group)\n",
+  "R² = ", round(R2, 3),
+  ", P = ", format.pval(P, digits = 3, eps = 0.001)
+)
+
+# PcoA 1: without elipses
+# 创建PCoA图，颜色表示聚类，形状表示时间点
+# 设置点的大小和透明度
+# 手动设置形状值（16和17）
+# 应用黑白主题
+# 手动设置颜色（聚类1为#bd7f1c，聚类2为#2a8a92）
+# 添加x=0和y=0的参考线
+# 设置坐标轴标签，显示PC1和PC2的解释方差百分比
+
+# 计算 PC1 / PC2 的解释度（百分比）
+# 计算 PC1 / PC2 解释度
+eig <- phyloseq_rarefied_phages_PcoA$values$Relative_eig * 100
+pc1_lab <- paste0("PC1 (", round(eig[1], 1), "%)")
+pc2_lab <- paste0("PC2 (", round(eig[2], 1), "%)")
+
+pcoa1 <- plot_ordination(
+  phyloseq_rarefied_phages_transformed,
+  phyloseq_rarefied_phages_PcoA,
+  color = "group",
+  shape = "cluster"
+) +
+  geom_point(size = 2.5, alpha = 1) +
+
+  ## cluster（即使现在只有 1 个，也不影响作图）
+  scale_shape_manual(values = c(`1` = 16, `2` = 17)) +
+
+  ## group（6 类）
+  scale_color_manual(values = c(
+    F1 = "#1b9e77",
+    F2 = "#d95f02",
+    FG = "#7570b3",
+    L1 = "#e7298a",
+    L2 = "#66a61e",
+    H  = "#e6ab02"
+  )) +
+
+  theme_bw() +
+
+  geom_hline(yintercept = 0, linetype = 3) +
+  geom_vline(xintercept = 0, linetype = 3) +
+
+  xlab(pc1_lab) +
+  ylab(pc2_lab) +
+
+  ## ⭐ 核心：PERMANOVA 结果标注
+  annotate(
+    "text",
+    x = Inf, y = Inf,
+    label = adon_label,
+    hjust = 1.1, vjust = 1.2,
+    size = 4,
+    fontface = "bold"
+  )
+
+########### 把“组中心”直接画到 pcoa1 图上（强烈推荐）
+# 用 Bray–Curtis 距离计算 group centroid
+# 使用你已有的 Bray–Curtis 距离
+bd <- betadisper(
+  phyloseq_rarefied_phages_transformed_bray,
+  group = meta_df$group
+)
+
+#bd
+
+# 各 group 的中心点（在 PCoA 空间）
+centroids <- bd$centroids
+#centroids
+
+# 计算 “组中心之间的距离矩阵”
+centroid_dist <- dist(centroids, method = "euclidean")
+cat("\nBray-Curtis distance between groups centroids:\n")
+as.matrix(centroid_dist)
+
+# 准备 centroid 数据用于 ggplot
+centroid_df <- as.data.frame(centroids)
+centroid_df$group <- rownames(centroid_df)
+
+pcoa1_centroid <- pcoa1 +
+  geom_point(
+    data = centroid_df,
+    aes(x = PCoA1, y = PCoA2, color = group),
+    size = 6,
+    shape = 4,   # 十字
+    stroke = 2
+  )
+
+pcoa1_centroid
+```
+
+```{r}
+#################################### 3 组间平均距离 Heatmap ####################################
+# ----------------------------
+# 1️⃣ 从 phyloseq 提取 metadata
+# ----------------------------
+meta_df <- data.frame(
+  sample_data(phyloseq_rarefied_phages_transformed),
+  check.names = FALSE
+)
+
+# 确保 group 是 factor，顺序固定
+meta_df$group <- factor(meta_df$group, levels = c("F1","F2","FG","L1","L2","H"))
+
+# ----------------------------
+# 2️⃣ 将 Bray–Curtis distance 转为矩阵
+# ----------------------------
+bray_mat <- as.matrix(phyloseq_rarefied_phages_transformed_bray)
+
+# 检查样本顺序是否一致
+if (!all(rownames(bray_mat) == rownames(meta_df))) {
+  stop("ERROR: Sample order mismatch between bray_mat and meta_df")
+}
+
+# ----------------------------
+# 3️⃣ 计算组间平均距离
+# ----------------------------
+group_dist <- expand.grid(
+  g1 = levels(meta_df$group),
+  g2 = levels(meta_df$group),
+  stringsAsFactors = FALSE
+)
+
+group_dist$mean_bray <- mapply(function(a, b) {
+  mean(
+    bray_mat[
+      meta_df$group == a,
+      meta_df$group == b
+    ],
+    na.rm = TRUE
+  )
+}, group_dist$g1, group_dist$g2)
+
+# ----------------------------
+# 4️⃣ 转换为矩阵形式（可视化）
+# ----------------------------
+group_bray_mat <- acast(
+  group_dist,
+  g1 ~ g2,
+  value.var = "mean_bray"
+)
+
+# ----------------------------
+# 5️⃣ 转换为 ggplot 可用的 long format
+# ----------------------------
+group_bray_df <- melt(group_bray_mat)
+colnames(group_bray_df) <- c("Group1", "Group2", "MeanBray")
+
+# ----------------------------
+# 6️⃣ 绘制热图
+# ----------------------------
+p_group_bray <- ggplot(group_bray_df,
+                       aes(Group1, Group2, fill = MeanBray)) +
+  geom_tile(color = "white") +  # 每个格子有白色边框
+  geom_text(aes(label = round(MeanBray, 3)), size = 3) + # 显示数值
+  scale_fill_gradient(
+    low = "#F7FBFF",
+    high = "#08306B",
+    name = "Mean Bray–Curtis"
+  ) +
+  theme_bw() +
+  theme(
+    axis.text.x = element_text(angle = 45, hjust = 1),
+    panel.grid = element_blank(),
+    axis.title = element_blank()
+  ) +
+  labs(
+    title = "Mean Bray–Curtis distance between groups"
+  )
+
+# 显示图
+p_group_bray
+
+# ----------------------------
+# 7️⃣ 保存图片（可选）
+# ----------------------------
+#ggsave(
+#  filename = "GroupMean_BrayCurtis_heatmap.png",
+#  plot = p_group_bray,
+#  width = 6,
+#  height = 5,
+#  dpi = 300
+#)
+# ----------------------------
+# 4️⃣-1 打印组间平均距离矩阵
+# ----------------------------
+
+cat("\nMean pairwise Bray–Curtis distance between groups:\n")
+print(round(group_bray_mat, 3))
+```
