@@ -55,9 +55,7 @@ def format_annotation_table(tax_file, output_tax_file):
     df[["Kingdom", "Phylum", "Class", "Order", "Family", "Genus", "Species"]] = df["taxonomy"].str.split(";", expand=True)
 
     # 把各列中以 "uc_" 开头的值修改为以 "Unclassified" 开头
-    df = df.applymap(lambda x: x.replace("uc_", "Unclassified"))
-    df = df.apply(lambda x: x.replace("uc_", "Unclassified")) #  if isinstance(x, str) else x
-
+    df = df.replace("uc_", "Unclassified", regex=True)
     df = df.drop(columns=["taxonomy"])
     df.to_csv(output_tax_file, sep="\t", index=False)
     return df
@@ -207,7 +205,7 @@ def main():
     output_tax_file = Path("votus_taxonomy.tsv")
 
     format_annotation_table(tax_assign, output_tax_file)
-    optimize_annotation_table(fasta_file, output_tax_file, output_tax_file)
+    optimize_annotation_table(votus, output_tax_file, output_tax_file)
 
 if __name__ == "__main__":
     main()
