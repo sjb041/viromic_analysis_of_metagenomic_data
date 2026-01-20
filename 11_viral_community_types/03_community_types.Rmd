@@ -1,77 +1,15 @@
 ---
-title: "2"
+title: "03_community_types"
 output: html_document
 ---
 ```{r}
-# ------------------------------
-# 通用函数：安装 R 包
-# ------------------------------
+# 安装 R 包
+micromamba create -n r r-base=4.3.0 bioconductor-microbiomemarker bioconductor-deseq2 
+micromamba activate r
 
-load_or_install <- function(
-  cran = character(),
-  bioc = character(),
-  github = character()
-) {
-  # --------------------------
-  # 1. 安装工具包 BiocManager / remotes
-  # --------------------------
-  tools <- c("BiocManager", "remotes")
-  missing_tools <- tools[!(tools %in% installed.packages()[, "Package"])]
-  if(length(missing_tools)) install.packages(missing_tools, dependencies = TRUE)
-  lapply(tools, library, character.only = TRUE)
-  
-  # --------------------------
-  # 2. 安装 CRAN 包
-  # --------------------------
-  if(length(cran)) {
-    missing_cran <- cran[!(cran %in% installed.packages()[, "Package"])]
-    if(length(missing_cran)) install.packages(missing_cran, dependencies = TRUE)
-  }
-  
-  # --------------------------
-  # 3. 安装 Bioconductor 包
-  # --------------------------
-  if(length(bioc)) {
-    for(pkg in bioc) {
-      if(!requireNamespace(pkg, quietly = TRUE)) {
-        BiocManager::install(pkg, ask = FALSE, update = TRUE)
-      }
-    }
-  }
-  
-  # --------------------------
-  # 4. 安装 GitHub 包
-  # --------------------------
-  if(length(github)) {
-    for(pkg in github) {
-      pkg_name <- sub(".*/", "", pkg) # 从 repo 名称提取包名
-      if(!requireNamespace(pkg_name, quietly = TRUE)) {
-        remotes::install_github(pkg)
-      }
-    }
-  }
-  
-  message("✅ 所有包安装完成")
-}
-```
-
-```{r}
-# CRAN 包
-cran_pkgs <- c("devtools", "ggplot2", "dplyr", "plyr", "reshape", "reshape2", "scales",
-               "viridis", "readr", "WriteXLS", "readxl", "RSQLite", "tidyverse", "vegan",
-               "dendsort", "ape", "seriation", "taxonomizr", "esquisse", "shiny", "fpc",
-               "grid", "coin", "rstatix", "PMCMR", "clValid", "cluster", "philentropy")
-
-# Bioconductor 包
-bioc_pkgs <- c("phyloseq", "ComplexHeatmap", "ALDEx2", "DirichletMultinomial", "DESeq2")
-
-# GitHub 包
-github_pkgs <- c("yiluheihei/microbiomeMarker", "tapj/biotyper")  # 开发版
-
-# 调用函数
-load_or_install(cran = cran_pkgs, bioc = bioc_pkgs, github = github_pkgs)
-
-install.packages("https://cran.r-project.org/src/contrib/Archive/RcppArmadillo/RcppArmadillo_0.9.900.3.0.tar.gz", repos=NULL, type="source")
+micromamba install r-devtools r-biotyper r-reshape r-writexls r-dendsort r-seriation \
+                   r-taxonomizr r-esquisse r-tidyverse r-rstatix r-PMCMR r-clValid \
+                   r-philentropy bioconductor-microbiome r-RcppArmadillo=0.9.900.3.0 -y
 ```
 
 ```{r}
@@ -86,7 +24,7 @@ library(readr)
 library(WriteXLS)
 library(readxl)
 library(remotes)
-#library(devtools)
+library(devtools)
 library(BiocManager)
 library(ComplexHeatmap)
 library(phyloseq)
@@ -94,23 +32,23 @@ library(ALDEx2)
 library(RSQLite)
 library(RcppArmadillo)
 library(DESeq2)
-#library(microbiomeMarker)
+library(microbiomeMarker)
 library(vegan)
 library(dendsort)
 library(ape)
 library(seriation)
 library(taxonomizr)
 library(esquisse)
-#library(tidyverse)
+library(tidyverse)
 library(grid)
 library(coin)
-#library(rstatix)
+library(rstatix)
 library(PMCMR)
-#library(biotyper)
+library(BiotypeR)
 library(DirichletMultinomial)
 library(shiny)
-library (fpc)
-library (clValid)
+library(fpc)
+library(clValid)
 library(cluster) 
 library(philentropy)
 ```
@@ -118,16 +56,15 @@ library(philentropy)
 ```{r}
 # 检查当前工作目录
 getwd()
-
 # 如果需要，可以改变工作目录
 setwd("/home/shijiabin/2025_2ME/11_viral_community_types")
 getwd()
 ```
 
 ```{r}
-# 1. Adding new class clusters based on %AAI
-# 1.1 Genus-like groups input
+#################################### 1. Create a phylseq objects ####################################
 ####################################
+# 1.1 Genus-like groups input
 # vOTU 绝对丰度表 (已稀释,消除测序深度的影响)
 votu_abundance_file <- "01_raw_counts/votu_raw_counts.tsv"
 abuntable <- read.table(votu_abundance_file, sep = "\t", header = TRUE, stringsAsFactors = FALSE)
@@ -146,13 +83,11 @@ for (i in seq_along(lines)) {
 
 # 添加 group 列
 abuntable$Genus_like_groups <- votu_to_group[abuntable$vOTU]
-```
 
-```{r}
-# 1.2 汇总分类注释
 ####################################
+# 1.2 汇总分类注释
 # 分类注释表
-taxtable_file <- "/home/shijiabin/2025_2ME/05_taxonomic_classification/method1-1/E/votus_taxonomy.tsv"
+taxtable_file <- "/home/shijiabin/2025_2ME/05_taxonomic_classification/votus_taxonomy.tsv"
 taxtable <- read.table(taxtable_file, sep = "\t", header = TRUE, stringsAsFactors = FALSE)
 
 # 添加 Genus_like_groups 列, 绝对丰度列
@@ -160,78 +95,51 @@ Mastertable <- merge(taxtable, abuntable, by=1, all=F)
 
 # votu 列做行名 (方便后续的表格操作, phyloseq能够识别)
 rownames(Mastertable) <- Mastertable$vOTU
-```
-
-```{r}
-# 1.3 修改列名以符合标准
-#colnames(Mastertable)[which(names(Mastertable) == "group")] <- "sample"
-
-#colnames(Mastertable)[which(names(Mastertable) == "kingdom")] <- "Kingdom"
-#colnames(Mastertable)[which(names(Mastertable) == "phylum")] <- "Phylum"
-#colnames(Mastertable)[which(names(Mastertable) == "class")] <- "Class"
-#colnames(Mastertable)[which(names(Mastertable) == "order")] <- "Order"
-#colnames(Mastertable)[which(names(Mastertable) == "family")] <- "Family"
-#colnames(Mastertable)[which(names(Mastertable) == "subfamily")] <- "Subfamily"
 
 # 根据原代码 https://github.com/Matthijnssenslab/IBDVirome/blob/main/IBDBiologicals/Code/PartVIII_phages_clustering.R
 # 第98,141,142,153行,将原分类注释表中的Genus删掉,然后换成Genus_like_groups
 Mastertable$Genus <- NULL
 colnames(Mastertable)[which(names(Mastertable) == "Genus_like_groups")] <- "Genus"
 
-# 将 votu 列的值赋给 Species 列, 补充 Species 列
-#Mastertable$Species <- Mastertable$vOTU
-```
-
-```{r}
-# 1.5.1 Create a matrix of abundance and taxonomy tables
 ####################################
-# 提取丰度列然后创建矩阵
+# 1.5.1 Create a matrix of abundance and taxonomy tables and sample_data
+# 1.5.1.1 提取丰度列然后创建矩阵
 abundance_table_rarefied <- Mastertable[, grep("^raw_counts_", colnames(Mastertable))]
 abundance_table_rarefied_m <- as.matrix(abundance_table_rarefied)
 
-# 提取分类列然后创建矩阵 
+# 1.5.1.2 提取分类列然后创建矩阵 
 target_cols <- c("Kingdom", "Phylum", "Class", "Order", "Family", "Subfamily", "Genus", "Species")
+#target_cols <- c("Genus")
 valid_cols <- target_cols[target_cols %in% colnames(Mastertable)]
-taxonomy_table_rarefied <- Mastertable[, valid_cols]
-# 显示最终的列名
-cat("实际存在的列:", paste(colnames(taxonomy_table_rarefied), collapse = ", "), "\n")
+taxonomy_table_rarefied <- Mastertable[, valid_cols, drop = FALSE]
 taxonomy_table_rarefied_m <- as.matrix(taxonomy_table_rarefied)
+# 显示最终的列名
+cat("taxonomy tables 实际存在的列:", paste(colnames(taxonomy_table_rarefied), collapse = ", "), "\n")
 
-# 创建 sample_data
+# 1.5.1.3 创建 sample_data
 sample_table_rarefied_for_all <- data.frame(row.names = colnames(abundance_table_rarefied))
-
 # group: 先去掉行名最后一个下划线及之后的部分,再去掉最后一个下划线及之前的部分
 sample_table_rarefied_for_all$group <- sub(".*_([^_]+)_.*", "\\1", rownames(sample_table_rarefied_for_all))
 
-# 1.5.2 Transform to phylseq objects
 ####################################
+# 1.5.2 Transform to phylseq objects
 ABUNDANCE_rarefied <- otu_table(abundance_table_rarefied_m, taxa_are_rows = TRUE)
 TAX_rarefied <- tax_table(taxonomy_table_rarefied_m)
 samples <- sample_data(sample_table_rarefied_for_all)
 phyloseq_rarefied_phages <- phyloseq(ABUNDANCE_rarefied,TAX_rarefied, samples)
 
-# 1.5.3 Visualize data & subset only the phage fraction
 ####################################
-sample_names(phyloseq_rarefied_phages) # All sample names
-rank_names(phyloseq_rarefied_phages) # All taxonomies
-sample_variables(phyloseq_rarefied_phages) ## All metadata
-phyloseq_rarefied_phages
-
+# 1.5.3 Visualize data & subset only the phage fraction
+#sample_names(phyloseq_rarefied_phages) # All sample names
+#rank_names(phyloseq_rarefied_phages) # All taxonomies
+#sample_variables(phyloseq_rarefied_phages) ## All metadata
+#phyloseq_rarefied_phages
 ```
 
 ```{r}
-# 2. Community typing
-###################################
-# SUMMARY:
-# using DMM clustering and BIC stability indices the number is cluster are determined on 2.
-# All the phages are subsequently being visualized on a PcOA plot.
-###################################
-
-# 2.1 Data trimming (aggregate common taxa)
-###################################
+#################################### 2.1 Data trimming (aggregate common taxa) ####################################
 # 将数据聚合到属水平
 phyloseq_rarefied_phages_visualization <- aggregate_taxa(phyloseq_rarefied_phages, 'Genus')
-
 
 # 对数据进行转换和稀有分类单元过滤
 phyloseq_rarefied_phages_DMM <- phyloseq_rarefied_phages_visualization %>%
@@ -249,38 +157,36 @@ cat("聚合后分类单元数:", nrow(tax_table(phyloseq_rarefied_phages_visuali
 # 检查属水平的唯一值
 cat("聚合后唯一属数:", length(unique(tax_table(phyloseq_rarefied_phages_visualization)[,"Genus"])), "\n")
 
-# 查看属的分布
-#table(tax_table(phyloseq_rarefied_phages_visualization)[,"Genus"])
+# -----------------------------
+# 新增：统计低丰度/低 prevalence 被过滤掉的行/列
+# -----------------------------
+
+# 聚合前 OTU 表
+otu_before <- otu_table(phyloseq_rarefied_phages_visualization)
+
+# 过滤后 OTU 表
+otu_after  <- otu_table(phyloseq_rarefied_phages_DMM)
+
+# 行（Genus）变化
+rows_removed <- nrow(otu_before) - nrow(otu_after)
+cat("被低丰度/低 prevalence 过滤掉的行数（Genus 数）:", rows_removed, "\n")
+
+# 列（samples）变化（一般不会变化）
+cols_removed <- ncol(otu_before) - ncol(otu_after)
+cat("被过滤掉的列数（样本数）:", cols_removed, "\n")
 ```
 
 ```{r}
-# 查看聚合后的内容
-otu_df <- as.data.frame(otu_table(phyloseq_rarefied_phages_visualization))
-
-if (!taxa_are_rows(phyloseq_rarefied_phages_visualization)) {
-  otu_df <- t(otu_df)
-  otu_df <- as.data.frame(otu_df)
-}
-
-# 把 taxa 名字变成一列，方便查看和画图
-otu_df$Taxa <- rownames(otu_df)
-
-```
-
-```{r}
-# 2.2 DMM algorithm
-###################################
-# Pick the OTU count matrix and convert it into samples x taxa format
+#################################### 2.2 DMM algorithm ####################################
 # 从phyloseq对象phyloseq_rarefied_phages_DMM中提取丰度矩阵
 # dat现在包含了每个分类单元（taxa）在每个样本中的丰度数据
 dat <- abundances(phyloseq_rarefied_phages_DMM)
 count <- as.data.frame(t(dat))
-phyloseq_rarefied_phages_DMM
 
 ## Remove 'Other' meaning all the unique viruses appearing only in less than 20% of samples (0.01 % abundance)
 # 计算每行（样本）的总丰度并添加为新列total
 count$total <- rowSums(count)
-# 移除总丰度为0的行（即没有任何病毒序列的样本
+# 移除总丰度为0的行（即没有任何病毒序列的样本)
 count <- count[!count$total == 0,]
 count$total <- NULL
 count$Other <- NULL
@@ -292,24 +198,24 @@ sort(rowSums(count))
 count$total <- NULL
 
 ## How many samples and reads are left for determining DMM clusters?
-nrow(count) # 363 samples left for which community-typing is possible
-sum(count) # 363 samples having 120M reads
+#nrow(count)
+#sum(count)
 
 ## Median genera per sample using community typing
-count_1 <- count
+#count_1 <- count
 # 将所有非零值转换为1，创建存在/不存在矩阵
-count_1[count_1 > 0] <- 1
-count_1 <- as.data.frame(count_1)
-count_1$prevalence <- rowSums(count_1)
-ncol(count_1) # 18 genera shared over 20% of samples with 0.01% abundance
-median(count_1$prevalence) # Median of 6 samples per samples
-mean(count_1$prevalence)
-nrow(count_1) # 363 samples can be used for clusters
-(nrow(count_1)/377)*100 # or > 96% can be used.
+#count_1[count_1 > 0] <- 1
+#count_1 <- as.data.frame(count_1)
+#count_1$prevalence <- rowSums(count_1)
+#ncol(count_1) # 18 genera shared over 20% of samples with 0.01% abundance
+#median(count_1$prevalence) # Median of 6 samples per samples
+#mean(count_1$prevalence)
+#nrow(count_1) # 363 samples can be used for clusters
+#nrow(count_1)/377)*100 # or > 96% can be used.
 
 # Determine DMM clusters and evaluate BIC score
 count <- as.matrix(count)
-fit <- lapply(1:5, dmn, count = count, verbose=TRUE)
+fit <- lapply(1:3, dmn, count = count, verbose=TRUE)
 
 # 选择哪个准则？
 # BIC: 通常在样本量较大时更受青睐，对模型复杂度惩罚更重
@@ -320,44 +226,59 @@ fit <- lapply(1:5, dmn, count = count, verbose=TRUE)
 lplc <- sapply(fit, laplace) # AIC / BIC / Laplace
 aic  <- sapply(fit, AIC) # AIC / BIC / Laplace
 bic  <- sapply(fit, BIC) # AIC / BIC / Laplace
+cat("lplc:", lplc, "\n")
+cat("aic:", aic, "\n")
+cat("bic:", bic, "\n")
 plot(bic, type="b", xlab="Number of Dirichlet Components", ylab="Model Fit")
 lines(lplc, type="b", lty = 2)
 lines(aic, type="b", lty = 3)
 ```
 
 ```{r}
+#################################### 2.2 Community typing ####################################
 # 选择最佳模型
 k <- which.min(unlist(bic))
 k <- 2
 best <- fit[[k]]
 
 # 显示最佳模型中各聚类的混合权重
-mixturewt(best)
+#mixturewt(best)
 # 显示最佳模型中每个样本的聚类分配
+cat("最佳模型中每个样本的聚类分配:\n")
 best@group
 # 显示最佳模型的混合参数信息
-best@mixture
-```
+#best@mixture
 
-```{r}
 # 此外，评估样本属于两个DMM组中某一个的概率。如果不太感兴趣可以省略这部分
 # best@group 包含了每个样本在各个聚类中的概率信息
-group_probability <- as.data.frame(best@group)
-mean(group_probability$V1)  # 计算第1个聚类的平均概率
-mean(group_probability$V2)  # 计算第2个聚类的平均概率
-median(group_probability$V1)  # 计算第1个聚类的中位数概率
-median(group_probability$V2)  # 计算第2个聚类的中位数概率
+#group_probability <- as.data.frame(best@group)
+#mean(group_probability$V1)  # 计算第1个聚类的平均概率
+#mean(group_probability$V2)  # 计算第2个聚类的平均概率
+#median(group_probability$V1)  # 计算第1个聚类的中位数概率
+#median(group_probability$V2)  # 计算第2个聚类的中位数概率
 
 # 根据概率选择每个样本所属的主要聚类（概率最高的那个）
 # mixture(best) 获取混合模型中每个样本在各聚类的概率
 cluster <- apply(mixture(best), 1, which.max)  # 对每行应用which.max函数，找出最大概率对应的聚类
 cluster <- as.data.frame(cluster)  # 转换为数据框格式
 cluster$cluster <- as.character(cluster$cluster)  # 将聚类列转换为字符型
-table(cluster$cluster) # 统计每个聚类的样本数
+#cat("每个聚类的样本数:\n")
+#table(cluster$cluster) # 统计每个聚类的样本数
 cluster_phylo <- sample_data(cluster)  # 将聚类结果转换为phyloseq样本数据格式，用于后续分析
+
+# 将聚类结果添加到phyloseq对象中
+phyloseq_rarefied_phages_visualization_1 <- merge_phyloseq(phyloseq_rarefied_phages_visualization, cluster_phylo)
+
+# 保存对象到文件
+dir.create("03_community_types", showWarnings = FALSE)
+saveRDS(
+  phyloseq_rarefied_phages_visualization_1,
+  file = "03_community_types/phyloseq_rarefied_phages_visualization_1.rds"
+)
+cat("合并肠型分析结果的 phyloseq 对象已保存到 03_community_types/phyloseq_rarefied_phages_visualization_1.rds 中 \n")
 ```
 
-```{r}
+```{}
 # At last find drivers or contribution of each taxonomic group to each component
 # 最后找出每个分类群对每个成分的驱动因素或贡献
 for (k in seq(ncol(fitted(best)))) {  # 遍历每个聚类（成分）
@@ -379,9 +300,6 @@ for (k in seq(ncol(fitted(best)))) {  # 遍历每个聚类（成分）
   print(p)  # 打印图表
 }
 
-```
-
-```{r}
 # 分析病毒属对不同DMM聚类的贡献程度
 contribution_viruses <- as.data.frame(fitted(best))
 contribution_viruses$cluster1 <- contribution_viruses$V1
@@ -390,7 +308,7 @@ contribution_viruses$V1 <- NULL
 contribution_viruses$V2 <- NULL
 ```
 
-```{r}
+```{}
 ###################################
 # 2.3 Add clusters to phyloseq object
 # 将聚类结果添加到phyloseq对象中，并计算样本中的属水平多样性信息
@@ -422,181 +340,4 @@ nrow(tax_table(phyloseq_rarefied_phages_visualization_1)) # 874 genera
 median(genera$prevalence) # 26 median
 mean(genera$prevalence) # 27.23 average
 ###################################
-```
-
-```{r}
-# 2.5 Bray-curtis dissimilarity and visualization 
-# Bray-Curtis 相似性分析和可视化
-###################################
-# 2.5.1 Remove samples for which no community-type can be assigned
-###################################
-# Remove NA's for clusters 
-phyloseq_rarefied_phages_visualization_2 = subset_samples(phyloseq_rarefied_phages_visualization_1, !cluster == "NA")
-# (n = 363 of the n = 377 have been assigned; or 96,3% of samples have a community-typing possible)
-###################################
-# 2.5.2 Transform count (log10)
-###################################
-# I use a log10 transformation for the simple fact that I observed before that taxa that are less abundant or often lysogenic phages
-# These are more shared and less abundant than lytic taxa. I don't want to underepresent these so log10 transformation
-# 使用log10转换是因为观察到丰度较低的类群（通常是溶原性噬菌体）比裂解性噬菌体更共享但丰度更低，对数转换可以避免低估这些类群
-# You could also opt for other transformation (eg. Hellinger transformation is famous one givin more weight to low-abundant taxa)
-# 也可以选择其他转换方法（如Hellinger转换，对低丰度类群给予更多权重）
-phyloseq_rarefied_phages_transformed = transform_sample_counts(phyloseq_rarefied_phages_visualization_2, function(x) log(10 + x))
-#phyloseq_rarefied_phages_hellinger = transform_sample_counts(phyloseq_rarefied_phages_visualization_2, "hellinger")
-###################################
-# 2.5.3 Bray-curtis dissimmilarities 计算 Bray-Curtis 相似性
-###################################
-phyloseq_rarefied_phages_transformed_bray <- phyloseq::distance(phyloseq_rarefied_phages_transformed, method="bray")
-###################################
-# 2.5.4 Reduce dimensionality and plot virome composition on PcoA
-###################################
-phyloseq_rarefied_phages_PcoA <- ordinate(phyloseq_rarefied_phages_transformed, method="PCoA", distance=phyloseq_rarefied_phages_transformed_bray)
-# 使用 ordinate() 函数进行排序分析
-# 方法选择 "PCoA"（主坐标分析）
-# 使用前面计算的 Bray-Curtis 距离矩阵作为距离参数
-# 用于降低数据维度并可视化噬菌体群落组成
-#View(sample_data(phyloseq_rarefied_phages_transformed))
-###################################
-```
-
-```{r}
-# 2.6 Visualization of microbiome using BC dissimilarities and PcOA plot
-###################################
-# Phyloseq: phyloseq_rarefied_phages_transformed
-# Bray-curtis data: phyloseq_rarefied_phages_transformed_bray
-# Ordinationation: phyloseq_rarefied_phages_PcoA
-
-metadata_begin <- as.data.frame(sample_data(phyloseq_rarefied_phages_transformed))
-
-# group 处理
-metadata_begin$group <- as.character(metadata_begin$group)
-metadata_begin$group <- factor(metadata_begin$group, levels = c("F1","F2","FG","L1","L2","H"))
-
-# <<< FIX: 确保 cluster 是 factor
-metadata_begin$cluster <- factor(metadata_begin$cluster)
-
-# 再合并回 phyloseq
-metadata_begin_ <- sample_data(metadata_begin)
-phyloseq_rarefied_phages_transformed <- merge_phyloseq(metadata_begin_, phyloseq_rarefied_phages_transformed)
-
-```
-
-```{r}
-# PcoA 1: without elipses
-# 创建PCoA图，颜色表示聚类，形状表示时间点
-# 设置点的大小和透明度
-# 手动设置形状值（16和17）
-# 应用黑白主题
-# 手动设置颜色（聚类1为#bd7f1c，聚类2为#2a8a92）
-# 添加x=0和y=0的参考线
-# 设置坐标轴标签，显示PC1和PC2的解释方差百分比
-plot_ordination(
-  phyloseq_rarefied_phages_transformed,
-  phyloseq_rarefied_phages_PcoA,
-  color = "group",      # <<< FIX: 颜色映射到 group
-  shape = "cluster"     # <<< FIX: 形状映射到 cluster
-) +
-  geom_point(size = 2.5, alpha=1)  +
-
-  ## cluster（2 类）→ shape
-  scale_shape_manual(
-    values = c(
-      `1` = 16,
-      `2` = 17
-    )
-  ) +  # <<< FIX
-
-  theme_bw() +
-
-  ## group（6 类）→ color
-  scale_color_manual(
-    values = c(
-      F1 = "#1b9e77",
-      F2 = "#d95f02",
-      FG = "#7570b3",
-      L1 = "#e7298a",
-      L2 = "#66a61e",
-      H  = "#e6ab02"
-    )
-  ) +  # <<< FIX
-
-  geom_hline(yintercept = 0, linetype = 3, colour = "black") + 
-  geom_vline(xintercept = 0, linetype = 3, colour = "black") +
-  xlab("PC1 (8.6%)") +
-  ylab("PC2 (4.1%)")
-```
-
-```{r}
-# PcoA 2: with ellipes
-# 创建带椭圆的PCoA图，颜色表示聚类，形状表示内窥镜结果
-# 设置标题为"DMM clustering"
-# 设置点的大小为2，透明度为0.75
-# 应用经典主题
-# 手动设置形状值（21, 16, 2）
-# 手动设置颜色
-# 添加参考线
-# 设置坐标轴标签
-# 详细设置主题元素（轴标签颜色、大小、字体等）
-# 添加置信椭圆（95%置信度）
-pcoa_plot_ <- plot_ordination(
-  phyloseq_rarefied_phages_transformed,
-  phyloseq_rarefied_phages_PcoA,
-  color="group",
-  shape="cluster",
-  title="DMM clustering"
-) +
-  geom_point(size=2.5, alpha=1) +  
-  theme_classic() +
-  scale_shape_manual(values = c(`1`=16, `2`=17)) +
-  scale_color_manual(values = c(
-    F1="#1b9e77", F2="#d95f02", FG="#7570b3",
-    L1="#e7298a", L2="#66a61e", H="#e6ab02"
-  )) +
-  geom_hline(yintercept=0, linetype=3, colour="black") + 
-  geom_vline(xintercept=0, linetype=3, colour="black") +
-  xlab("PC1 (8.6%)") +
-  ylab("PC2 (4.1%)") +
-  theme(
-    axis.text.y = element_text(colour="black", size=9, face="bold"),
-    axis.text.x = element_text(colour="black", face="bold", size=9),
-    legend.text = element_text(size=9, face="bold", colour="black"),
-    legend.position = "right",
-    axis.title.y = element_text(face="bold", size=14),
-    axis.title.x = element_text(face="bold", size=14, colour="black"),
-    legend.title = element_blank(),
-    panel.background = element_blank(),
-    panel.border = element_rect(colour="black", fill=NA, size=1.2)
-  ) +
-  stat_ellipse(aes(group = cluster), type = 't', size = 1, linetype = 2, level = 0.95)
-
-plot(pcoa_plot_)
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
-```
-
-```{r}
-
 ```
