@@ -1,67 +1,42 @@
----
-title: "04_bray_curtis_dissimilarity_visualization"
-output: html_document
----
-```{r}
+#!/usr/bin/env Rscript
+
+# micromamba activate r
+# Rscript 04_bray_curtis_dissimilarity_visualization.R
+#######################################################################
+######################### 输入
+# phyloseq 对象
+phyloseq_object_file <- "03_community_types/phyloseq_rarefied_phages_visualization_1.rds"
+######################### 输出
+# 组中心距离矩阵
+centroid_distance_table <- "04_bray_curtis/centroid_distance_table.txt"
+# 组中心 pcoa 图
+centroid_distance_pcoa <- "04_bray_curtis/centroid_distance_table.png"
+# 组平均距离矩阵
+mean_distance_table <- "04_bray_curtis/mean_distance_table.txt"
+# 组平均热图
+mean_distance_heatmap <- "04_bray_curtis/mean_distance_heatmap.png"
+#######################################################################
+
 # 安装 R 包
-micromamba create -n r r-base=4.3.0 bioconductor-microbiomemarker bioconductor-deseq2 
-micromamba activate r
+#micromamba create -n r r-base=4.3.0 bioconductor-microbiomemarker bioconductor-deseq2 
+#micromamba activate r
 
-micromamba install r-devtools r-biotyper r-reshape r-writexls r-dendsort r-seriation \
-                   r-taxonomizr r-esquisse r-tidyverse r-rstatix r-PMCMR r-clValid \
-                   r-philentropy bioconductor-microbiome r-RcppArmadillo=0.9.900.3.0 -y
-```
+#micromamba install r-devtools r-biotyper r-reshape r-writexls r-dendsort r-seriation \
+#                   r-taxonomizr r-esquisse r-tidyverse r-rstatix r-PMCMR r-clValid \
+#                   r-philentropy bioconductor-microbiome r-RcppArmadillo=0.9.900.3.0 -y
 
-```{r}
-library(ggplot2)
+## Microbiome analysis
+library(phyloseq)
+library(vegan)
+
+## Data manipulation
 library(dplyr)
-library(plyr)
 library(reshape)
 library(reshape2)
-library(scales)
-library(viridis)
-library(readr)
-library(WriteXLS)
-library(readxl)
-library(remotes)
-library(devtools)
-library(BiocManager)
-library(ComplexHeatmap)
-library(phyloseq)
-library(ALDEx2)
-library(RSQLite)
-library(RcppArmadillo)
-library(DESeq2)
-library(microbiomeMarker)
-library(vegan)
-library(dendsort)
-library(ape)
-library(seriation)
-library(taxonomizr)
-library(esquisse)
-library(tidyverse)
-library(grid)
-library(coin)
-library(rstatix)
-library(PMCMR)
-library(BiotypeR)
-library(DirichletMultinomial)
-library(shiny)
-library(fpc)
-library(clValid)
-library(cluster) 
-library(philentropy)
-```
 
-```{r}
-# 检查当前工作目录
-getwd()
-# 如果需要，可以改变工作目录
-setwd("/home/shijiabin/2025_2ME/11_viral_community_types")
-getwd()
-```
+## Visualization
+library(ggplot2)
 
-```{r}
 #################################### 1 数据预处理 ####################################
 # Phyloseq: phyloseq_rarefied_phages_transformed
 # Bray-curtis data: phyloseq_rarefied_phages_transformed_bray
@@ -69,7 +44,7 @@ getwd()
 ###################################
 
 # 读取合并肠型分析结果的 phyloseq 对象
-phyloseq_rarefied_phages_visualization_1 <- readRDS("03_community_types/phyloseq_rarefied_phages_visualization_1.rds")
+phyloseq_rarefied_phages_visualization_1 <- readRDS(phyloseq_object_file)
 
 # 2.5.1 Remove samples for which no community-type can be assigned
 ###################################
@@ -117,9 +92,7 @@ metadata_begin$cluster <- factor(metadata_begin$cluster)
 # 再合并回 phyloseq
 metadata_begin_ <- sample_data(metadata_begin)
 phyloseq_rarefied_phages_transformed <- merge_phyloseq(metadata_begin_, phyloseq_rarefied_phages_transformed)
-```
 
-```{r}
 #################################### 2 组间中心距离 PCoA ####################################
 # 把 R² 和 P 值直接标注到 PCoA 图上
 # 把“组中心”直接画到 pcoa1 图上
@@ -245,7 +218,7 @@ centroid_df <- ord_df %>%
   )
 
 # Step 4：把组中心画到你已有的 pcoa1 上
-pcoa1 +
+pcoa_centroid <- pcoa1 +
   geom_point(
     data = centroid_df,
     inherit.aes = FALSE,
@@ -261,7 +234,19 @@ pcoa1 +
     vjust = -1,
     fontface = "bold",
     size = 4
+  ) + 
+  labs(
+    title = "Bray-Curtis distance between groups centroid"
   )
+
+# 保存图
+ggsave(
+  filename = centroid_distance_pcoa,
+  plot = pcoa_centroid,
+  width = 6,
+  height = 5,
+  dpi = 300
+)
 
 # Step 5：计算组中心之间的距离矩阵（PCoA 空间）
 # 确保 rownames 是 group
@@ -276,15 +261,17 @@ centroid_mat <- centroid_mat[, c("PC1", "PC2")]
 # 计算欧氏距离矩阵
 centroid_dist <- dist(centroid_mat, method = "euclidean")
 
-# 转成矩阵，便于查看和导出
-centroid_dist_mat <- as.matrix(centroid_dist)
+# 将dist对象转换为矩阵（自动保留行列名）
+centroid_mat <- as.matrix(centroid_dist)
+centroid_mat <- round(centroid_mat, 4)
 
-# 查看结果
-cat("\nBray-Curtis distance between groups centroids:\n")
-centroid_dist_mat
-```
+# 保存结果
+centroid_mat_formatted <- capture.output(print(centroid_mat)) # 捕获控制台的格式化输出
+cat("Bray-Curtis distance between groups centroid:\n", 
+    file = centroid_distance_table)
+cat(paste(centroid_mat_formatted, collapse = "\n"), "\n", 
+    file = centroid_distance_table, append = TRUE)
 
-```{r}
 #################################### 3 组间平均距离 Heatmap ####################################
 # ----------------------------
 # 1️⃣ 从 phyloseq 提取 metadata
@@ -351,7 +338,7 @@ p_group_bray <- ggplot(group_bray_df,
   scale_fill_gradient(
     low = "#F7FBFF",
     high = "#08306B",
-    name = "Mean Bray–Curtis"
+    name = "Mean Bray-Curtis"
   ) +
   theme_bw() +
   theme(
@@ -360,26 +347,26 @@ p_group_bray <- ggplot(group_bray_df,
     axis.title = element_blank()
   ) +
   labs(
-    title = "Mean Bray–Curtis distance between groups"
+    title = "Mean Bray-Curtis distance between groups"
   )
-
-# 显示图
-p_group_bray
 
 # ----------------------------
 # 7️⃣ 保存图片（可选）
 # ----------------------------
-#ggsave(
-#  filename = "GroupMean_BrayCurtis_heatmap.png",
-#  plot = p_group_bray,
-#  width = 6,
-#  height = 5,
-#  dpi = 300
-#)
+ggsave(
+  filename = mean_distance_heatmap,
+  plot = p_group_bray,
+  width = 6,
+  height = 5,
+  dpi = 300
+)
 # ----------------------------
 # 4️⃣-1 打印组间平均距离矩阵
 # ----------------------------
 
-cat("\nMean pairwise Bray–Curtis distance between groups:\n")
-print(round(group_bray_mat, 3))
-```
+# 保存结果
+group_bray_mat_formatted <- capture.output(print(round(group_bray_mat, 4))) # 捕获控制台的格式化输出
+cat("Mean pairwise Bray-Curtis distance between groups:\n", 
+    file = mean_distance_table)
+cat(paste(group_bray_mat_formatted, collapse = "\n"), "\n", 
+    file = mean_distance_table, append = TRUE)
