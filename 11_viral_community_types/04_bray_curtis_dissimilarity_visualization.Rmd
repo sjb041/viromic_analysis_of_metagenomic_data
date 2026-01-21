@@ -57,20 +57,19 @@ library(philentropy)
 # 检查当前工作目录
 getwd()
 # 如果需要，可以改变工作目录
-setwd("/home/shijiabin/2025_2ME/11_viral_community_types/A")
+setwd("/home/shijiabin/2025_2ME/11_viral_community_types")
 getwd()
 ```
 
-```{r}
-# 读取合并肠型分析结果的 phyloseq 对象
-phyloseq_rarefied_phages_visualization_1 <- readRDS("03_community_types/phyloseq_rarefied_phages_visualization_1.rds")
-```
 ```{r}
 #################################### 1 数据预处理 ####################################
 # Phyloseq: phyloseq_rarefied_phages_transformed
 # Bray-curtis data: phyloseq_rarefied_phages_transformed_bray
 # Ordinationation: phyloseq_rarefied_phages_PcoA
 ###################################
+
+# 读取合并肠型分析结果的 phyloseq 对象
+phyloseq_rarefied_phages_visualization_1 <- readRDS("03_community_types/phyloseq_rarefied_phages_visualization_1.rds")
 
 # 2.5.1 Remove samples for which no community-type can be assigned
 ###################################
@@ -211,39 +210,78 @@ pcoa1 <- plot_ordination(
     fontface = "bold"
   )
 
-########### 把“组中心”直接画到 pcoa1 图上（强烈推荐）
-# 用 Bray–Curtis 距离计算 group centroid
-# 使用你已有的 Bray–Curtis 距离
-bd <- betadisper(
-  phyloseq_rarefied_phages_transformed_bray,
-  group = meta_df$group
+########### 把“组中心”直接画到 pcoa1 图上
+# Step 1：提取 PCoA 坐标
+# 提取样本在 PCoA 空间中的坐标
+ord_df <- as.data.frame(phyloseq_rarefied_phages_PcoA$vectors[, 1:2])
+colnames(ord_df) <- c("PC1", "PC2")
+
+# 加上样本名（非常关键）
+ord_df$SampleID <- rownames(ord_df)
+
+# Step 2：从 phyloseq 中提取 group，并按 SampleID 精确匹配
+# 提取 metadata
+meta_df <- data.frame(
+  sample_data(phyloseq_rarefied_phages_transformed),
+  check.names = FALSE
 )
 
-#bd
+meta_df$SampleID <- rownames(meta_df)
 
-# 各 group 的中心点（在 PCoA 空间）
-centroids <- bd$centroids
-#centroids
+# 合并 PCoA 坐标 + group
+ord_df <- left_join(
+  ord_df,
+  meta_df[, c("SampleID", "group")],
+  by = "SampleID"
+)
 
-# 计算 “组中心之间的距离矩阵”
-centroid_dist <- dist(centroids, method = "euclidean")
-cat("\nBray-Curtis distance between groups centroids:\n")
-as.matrix(centroid_dist)
-
-# 准备 centroid 数据用于 ggplot
-centroid_df <- as.data.frame(centroids)
-centroid_df$group <- rownames(centroid_df)
-
-pcoa1_centroid <- pcoa1 +
-  geom_point(
-    data = centroid_df,
-    aes(x = PCoA1, y = PCoA2, color = group),
-    size = 6,
-    shape = 4,   # 十字
-    stroke = 2
+# Step 3：计算“PCoA 空间中的组中心”
+centroid_df <- ord_df %>%
+  dplyr::group_by(group) %>%
+  dplyr::summarise(
+    PC1 = mean(PC1),
+    PC2 = mean(PC2),
+    .groups = "drop"
   )
 
-pcoa1_centroid
+# Step 4：把组中心画到你已有的 pcoa1 上
+pcoa1 +
+  geom_point(
+    data = centroid_df,
+    inherit.aes = FALSE,
+    aes(x = PC1, y = PC2, color = group),
+    shape = 4,        # 十字，和样本点明显区分
+    size = 6,
+    stroke = 1.5
+  ) +
+  geom_text(
+    data = centroid_df,
+    inherit.aes = FALSE,
+    aes(x = PC1, y = PC2, label = group),
+    vjust = -1,
+    fontface = "bold",
+    size = 4
+  )
+
+# Step 5：计算组中心之间的距离矩阵（PCoA 空间）
+# 确保 rownames 是 group
+centroid_mat <- centroid_df %>%
+  as.data.frame()
+
+rownames(centroid_mat) <- centroid_mat$group
+
+# 只保留坐标列
+centroid_mat <- centroid_mat[, c("PC1", "PC2")]
+
+# 计算欧氏距离矩阵
+centroid_dist <- dist(centroid_mat, method = "euclidean")
+
+# 转成矩阵，便于查看和导出
+centroid_dist_mat <- as.matrix(centroid_dist)
+
+# 查看结果
+cat("\nBray-Curtis distance between groups centroids:\n")
+centroid_dist_mat
 ```
 
 ```{r}
