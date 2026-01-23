@@ -8,6 +8,7 @@
 #       Phage taxonomy annotation pipeline:
 #       virify (v3 版数据库和 v4 版分类信息2022版)
 #       1. votus 输入 virify (--onlyannotate, --length 0, --viphog_version v3, --meta_version v4)
+#       2. 优化分类注释表
 #   参考文献: 2022-An integrated detection, annotation and taxonomic classification pipeline using virus-specific protein profile hidden Markov models
 # 
 # Dependencies:
