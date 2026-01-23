@@ -11,6 +11,7 @@
 #       2. 预测ORF (prodigal, -p meta)
 #       3. 预测出的蛋白序列输入 vcontact2, 生成 viral clusters
 #       4. 根据 genomad 的注释信息和 viral clusters, 分配分类注释
+#       5. 优化分类注释表
 #   参考文献: 2025-Metagenomic analysis reveals gut phage diversity across three mammalian models
 # 
 # Dependencies:
