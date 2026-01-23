@@ -8,6 +8,7 @@
 #       Phage taxonomy annotation pipeline:
 #       votus --> PhaBOX2-phagcn (phabox_db_v2_1)
 #       1. votus 输入 phagcn (--task phagcn, --len 0)
+#       2. 优化分类注释表
 #   参考文献: 2024-The phageome of patients with ulcerative colitis treated with donor fecal microbiota reveals markers associated with disease remission
 # 
 # Dependencies:
