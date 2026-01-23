@@ -10,6 +10,7 @@
 #       1. 预测ORF (prodigal, -p meta)
 #       2. 预测出的蛋白序列输入 vcontact2
 #       3. 同一病毒簇中, 若含有参考数据库的序列, 则将该参考序列的分类信息分配给其他成员
+#       4. 优化分类注释表
 #   参考文献: 2024-The gut ileal mucosal virome is disturbed in patients with Crohn’sdiseaseand exacerbates intestinal inflammation in mice
 # 
 # Dependencies:
