@@ -5,13 +5,13 @@ Date: 2026-01-26
 
 Description:
     计算相对丰度,公式1:
-        1. 每对样本随机采样 1500 万对 reads,
-        2. 使用 bowtie2 比对每一对样本的 reads 到 votus,
-        3. 基因组长度归一化: count_per_bp = mapped_reads / genome_length,
+        1. 每对样本随机采样 1500 万对 reads
+        2. 使用 bowtie2 比对每一对样本的 reads 到 votus
+        3. 基因组长度归一化: count_per_bp = mapped_reads / genome_length
         4. 相对丰度计算: rel_abun = count_per_bp / sum(all_count_per_bp)
     参考文献: 2025-The Chinese gut virus catalogue reveals gut virome diversity and disease-related viral signatures   
  
- Dependencies:
+Dependencies:
     BBMap/reformat.sh --version 39.61
     bowtie2 --version 2.3.5.1
     samtools --version 1.10
