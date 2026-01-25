@@ -1,22 +1,24 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Date: 2026-01-07
+
+Description:
+    计算相对丰度,公式3:
+        1. 每对样本随机采样 1500 万对 reads
+        2. 使用 bowtie2 比对每一对样本的 reads 到 votus
+        3. 相对丰度计算: rel_abun = mapped_reads  / sum(mapped_reads)
+    参考文献: 2022-A catalog of 48,425 nonredundant viruses from oral metagenomes expands the horizon of the human oral
+
+Dependencies:
+    BBMap/reformat.sh --version 39.61
+    bowtie2 --version 2.3.5.1
+    samtools --version 1.10
+"""
+
 import subprocess
 import os
 import pandas as pd
-
-######################################
-# Date: 2026-01-07
-#
-# Description:
-#   计算相对丰度,公式3:
-#       每对样本随机采样 1500 万对 reads,
-#       使用 bowtie2 比对每一对样本的 reads 到 votus,
-#       相对丰度计算: rel_abun = mapped_reads  / sum(mapped_reads)
-#   参考文献: A catalog of 48,425 nonredundant viruses from oral metagenomes expands the horizon of the human oral
-# Dependencies:
-#   BBMap/reformat.sh --version 39.61
-#   bowtie2 --version 2.3.5.1
-#   samtools --version 1.10
-######################################
 
 ###################################### step1 采样 1500 万对 reads
 def sampling_reads(bbmap_reformat, in1, in2, out1, out2, num_reads, seed, threads):
