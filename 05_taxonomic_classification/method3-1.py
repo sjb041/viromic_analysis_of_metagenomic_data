@@ -326,7 +326,7 @@ def main():
     tax_assign
     votus
     # 输出
-    final_tax = "votus_taxonomy.tsv"
+    final_tax = "votu_tax.tsv"
 
     modify_column_names(tax_assign, final_tax)
     optimize_annotation_table(votus, final_tax, final_tax)
