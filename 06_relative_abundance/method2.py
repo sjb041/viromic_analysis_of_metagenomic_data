@@ -6,7 +6,7 @@ Date: 2026-01-26
 Description:
     计算相对丰度,公式2:
         1. 使用 bowtie2 比对每一个样本的 reads 到 votus
-        2. 从原 sam 文件中提取出 45 万个不同的 read 名,然后根据这些 reads 名筛选原 sam 文件,
+        2. 从原 sam 文件中提取出 45 万个不同的 read 名,然后根据这些 reads 名筛选原 sam 文件
         3. 基于筛选后的 sam 文件重新计算每个 vOTU 的 read 数量
         4. 每个样本中每个 vOTU 的 相对丰度 定义为其 read 数量除以 450000
     参考文献: 2025-A metagenome-wide study of the gut virome in chronic kidney disease  
