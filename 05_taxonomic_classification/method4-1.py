@@ -202,7 +202,7 @@ def main():
     # 输入
     tax_assign = Path("01_mmseqs_taxonomy/votus_lca.tsv")
     # 输出
-    output_tax_file = Path("votus_taxonomy.tsv")
+    output_tax_file = Path("votu_tax.tsv")
 
     format_annotation_table(tax_assign, output_tax_file)
     optimize_annotation_table(votus, output_tax_file, output_tax_file)
