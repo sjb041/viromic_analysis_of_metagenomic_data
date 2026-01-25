@@ -337,7 +337,7 @@ def main():
     votus
     tax_assign
     # 输出
-    final_tax = Path("votus_taxonomy.tsv")
+    final_tax = Path("votu_tax.tsv")
     optimize_annotation_table(votus, tax_assign, final_tax)
 if __name__ == "__main__":
     main()
