@@ -9,11 +9,11 @@ Description:
         2. 从原 sam 文件中提取出 45 万个不同的 read 名,然后根据这些 reads 名筛选原 sam 文件,
         3. 基于筛选后的 sam 文件重新计算每个 vOTU 的 read 数量
         4. 每个样本中每个 vOTU 的 相对丰度 定义为其 read 数量除以 450000
-   参考文献: 2025-A metagenome-wide study of the gut virome in chronic kidney disease  
+    参考文献: 2025-A metagenome-wide study of the gut virome in chronic kidney disease  
 
 Dependencies:
-   bowtie2 --version 2.3.5.1
-   samtools --version 1.10
+    bowtie2 --version 2.3.5.1
+    samtools --version 1.10
 
 A:
 {'F1_1A': 613338, 'F1_2A': 479386, 'F1_3A': 643799, 'F2_1A': 1334157, 'F2_2A': 662320, 'F2_3A': 882047, 'FG_1A': 3132991, 'FG_2A': 986908, 'FG_3A': 909400, 'L1_1A': 1347670, 'L1_2A': 825013, 'L1_3A': 1447137, 'L2_1A': 727399, 'L2_2A': 850688, 'L2_3A': 1415388, 'H_LX': 482631, 'H_O': 627098}
@@ -29,10 +29,6 @@ import subprocess
 import random
 from collections import Counter
 import pandas as pd
-import matplotlib
-matplotlib.use('Agg')
-import matplotlib.pyplot as plt
-import seaborn as sns
 import argparse
 
 # =============================
