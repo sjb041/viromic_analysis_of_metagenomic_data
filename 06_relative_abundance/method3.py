@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
-Date: 2026-01-07
+Date: 2026-01-26
 
 Description:
     计算相对丰度,公式3:
