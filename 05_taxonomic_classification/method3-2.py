@@ -240,7 +240,7 @@ def main():
     tax_assign
     votus
     # 输出
-    final_tax = "votus_taxonomy.tsv"
+    final_tax = "votu_tax.tsv"
 
     optimize_annotation_table(votus, tax_assign, final_tax)
 
