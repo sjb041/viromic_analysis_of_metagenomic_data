@@ -1,24 +1,25 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Date: 2026-01-25
+
+Description:
+    计算相对丰度,公式4:
+        1. 不需要随机采样 reads, 因为 RPKM 在公式里除以了总 mapped reads(百万), 因此不同样本即使测序深度差异很大, 得到的值也能直接比较
+        2. 使用 bowtie2 比对每一对样本的 reads 到 votus
+        3. 使用 BBMap/pileup.sh 将每个 vOTU 的 mapped_reads 标准化为 RPKM
+        4. 相对丰度计算: rel_abun = RPKM / sum(RPKM)
+    参考文献: 2024-The gut ileal mucosal virome is disturbed in patients with Crohn’sdiseaseand exacerbates intestinal inflammation in mice
+ 
+Dependencies:
+    bowtie2 --version 2.3.5.1
+    samtools --version 1.10
+    BBMap/pileup.sh --version 39.61
+"""
+
 import subprocess
 import os
 import pandas as pd
-
-######################################
-# Date: 2026-01-25
-#
-# Description:
-#   计算相对丰度,公式4:
-#       不需要随机采样 reads, 因为 RPKM 在公式里除以了总 mapped reads(百万), 因此不同样本即使测序深度差异很大, 得到的值也能直接比较, 
-#       使用 bowtie2 比对每一对样本的 reads 到 votus,
-#       使用 BBMap/pileup.sh 将每个 vOTU 的 mapped_reads 标准化为 RPKM,
-#       相对丰度计算: rel_abun = RPKM / sum(RPKM)
-#   参考文献: The gut ileal mucosal virome is disturbed in patients with Crohn’sdiseaseand exacerbates intestinal inflammation in mice
-# 
-# Dependencies:
-#   bowtie2 --version 2.3.5.1
-#   samtools --version 1.10
-#   BBMap/pileup.sh --version 39.61
-######################################
 
 ###################################### step1 bowtie2 比对
 def run_bowtie2_mapping(votus, reads1, reads2, output_dir, outputfile_prefix, threads):
