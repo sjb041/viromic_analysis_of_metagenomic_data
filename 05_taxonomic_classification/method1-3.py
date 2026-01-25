@@ -256,7 +256,7 @@ def main():
     votus
     tax_formatted
     # 输出
-    final_tax = Path("votus_taxonomy.tsv")
+    final_tax = Path("votu_tax.tsv")
 
     optimize_annotation_table(votus, tax_formatted, final_tax)
 
