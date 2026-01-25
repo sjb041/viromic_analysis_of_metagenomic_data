@@ -212,7 +212,7 @@ def main():
     votus
     tax_virify
     # 输出
-    final_tax = Path("votus_taxonomy.tsv")
+    final_tax = Path("votu_tax.tsv")
 
     modify_column_names(tax_virify, final_tax)
     optimize_annotation_table(votus, final_tax, final_tax)
