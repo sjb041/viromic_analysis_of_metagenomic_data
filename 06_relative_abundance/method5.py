@@ -1,15 +1,24 @@
 #!/usr/bin/env python3
+# -*- coding: utf-8 -*-
+"""
+Date: 2026-01-26
 
-# 计算相对丰度,公式5:
-# 使用 Prodigal 预测 UVIGs 的 ORFs，输出核苷酸序列
-# 使用 CD-HIT(v4.6.6)在95%核苷酸同一性和85%的比对区域上进行聚类(cd-hit -c 0.95 -n 5 -aS 0.85 -M 6000)
-# 将原始测序reads比对到聚类质心序列
-# 计算RPK和CPM
-# 计算UViGs相对丰度
-# 计算物种级 vOTU相对丰度
+Description:
+    计算相对丰度,公式5:
+        1. 使用 Prodigal 预测所有病毒的 ORFs，输出核苷酸序列
+        2. 使用 CD-HIT 对 ORF 在 95% ANI 和 85% AF 上进行聚类, 得到 ORF 质心序列
+        3. 将原始测序 reads 比对到质心序列
+        4. 计算质心序列的 RPK 和 CPM
+        5. 排序中位数得到所有病毒的 CPM
+        6. 汇总 vOTU 的 CPM, 归一化为相对丰度
+    参考文献: 2024-Fecal microbiota transplantation alters gut phage communities in a clinical trial for obesity  
 
-# 参考文献 2024-Fecal microbiota transplantation alters gut phage communities in a clinical trial for obesity
-
+Dependencies:
+    prodigal --version 2.6.3
+    cd-hit --version 4.8.1
+    bwa-mem2 --version 2.2.1
+    samtools --version 1.10
+"""
 
 import os
 import pandas as pd
@@ -76,22 +85,17 @@ def extract_sample_from_uvig_id(uvig_id):
         print(f"警告: 提取样本名时出错，UViG ID: {uvig_id}, 错误: {e}")
         return "unknown"
 
-
-
-# 输出目录
-os.makedirs('04_abundance', exist_ok=True)
-
 # --------------------------------------------- all viruses orf centroids --------------------------------------------- #
 #### 预测 orf
 # 输入
-virus = "/home/shijiabin/2025_2ME/03_virus_identification/methodA/all_viruses.fna"
+virus = "/home/shijiabin/2025_2ME/03_virus_identification/all_viruses.fna"
 # 输出
 dir_centroids = "01_orfs_centroids"
 os.makedirs(dir_centroids, exist_ok=True)
 orf = f"{dir_centroids}/all_viruses.orf.fna"
 
 cmd_orf = (f"prodigal -i {virus} -d {orf} -p meta")
-#subprocess.run(cmd_orf, shell=True, check=True)
+subprocess.run(cmd_orf, shell=True, check=True)
 
 #### 聚类获取 centroids
 # 输入
@@ -100,7 +104,7 @@ orf
 centroids = f"{dir_centroids}/all_viruses.orf.centroids.fna"
 
 cmd_centroids = (f"cd-hit-est -i {orf} -o {centroids} -c 0.95 -n 10 -aS 0.85 -d 0")
-#subprocess.run(cmd_centroids, shell=True, check=True)
+subprocess.run(cmd_centroids, shell=True, check=True)
 
 # --------------------------------------------- reads mapping centroids --------------------------------------------- #
 # 样本名
@@ -118,11 +122,11 @@ SAMPLES = [
 reads_dir = "/home/shijiabin/2025_2ME/01_raw_sequence_preprocessing/03_cleandata"
 
 # 输出目录
-dir_mapping = "03_mapping"
+dir_mapping = "02_mapping"
 os.makedirs(dir_mapping, exist_ok=True)
 
 # 建索引
-cmd_bwa_index = f"bwa-mem2 index {centroids}"
+cmd_bwa_index = f"bwa-mem2 index -p {dir_mapping}/index {centroids}"
 subprocess.run(cmd_bwa_index, shell=True, check=True)
 
 for sample in SAMPLES:
@@ -132,23 +136,34 @@ for sample in SAMPLES:
     centroids
     # 输出
     bam = f"{dir_mapping}/{sample}.bam"
+    idxstats = f"{dir_mapping}/{sample}.idxstats"
+    flagstat = f"{dir_mapping}/{sample}.flagstat"
     
+    # 比对
     cmd_bwa = (
-        f"bwa-mem2 mem -t 20 {centroids} {r1} {r2} | "
+        f"bwa-mem2 mem -t 10 {dir_mapping}/index {r1} {r2} | "
         f"samtools view -bS - | "
         f"samtools sort -@ 6 -o {bam} -"
     )
     subprocess.run(cmd_bwa, shell=True, check=True)
+
+    # 建立索引并生成 idxstats 统计信息
+    cmd_idxstats = (f"samtools index {bam} && samtools idxstats {bam} > {idxstats}")
+    subprocess.run(cmd_idxstats, shell=True, check=True)
+    
+    # 生成 flagstat 统计信息(基于reads数量)
+    cmd_flagstat = (f"samtools flagstat {bam} > {flagstat}")
+    subprocess.run(cmd_flagstat, shell=True, check=True)
 
 # --------------------------------------------- calculate_gene_cpm --------------------------------------------- #
 # 输入
 centroids
 
 # 输出
-dir_gene_cpm = "04_gene_cpm"
+dir_gene_cpm = "03_gene_cpm"
 os.makedirs(dir_gene_cpm, exist_ok=True)
 cpm_table = f"{dir_gene_cpm}/gene_cpm.tsv"
-alignment_stats = f"{dir_gene_cpm}/alignment_stats.tsv"
+alignment_stats_file = f"{dir_gene_cpm}/alignment_stats.tsv"
 
 # 获取聚类代表序列的长度
 gene_lengths = get_gene_lengths(centroids)
@@ -156,7 +171,7 @@ gene_lengths = get_gene_lengths(centroids)
 # 计算 RPK (Reads Per Kilobase)
 all_data = {}
 for sample in SAMPLES:
-    idxstats_file = f'03_mapping/{sample}.idxstats'
+    idxstats_file = f'{dir_mapping}/{sample}.idxstats'
     if os.path.exists(idxstats_file):
         data = parse_idxstats(idxstats_file)
         data['rpk'] = data['mapped'] / (data['length'] / 1000)
@@ -194,7 +209,7 @@ gene_abundance.to_csv(cpm_table, sep='\t')
 # 输出每个样本的比对率统计
 alignment_stats = pd.DataFrame(index=SAMPLES, columns=['total_reads', 'mapped_reads', 'mapping_rate'])
 for sample in SAMPLES:
-    flagstat_file = f'03_mapping/{sample}.flagstat'
+    flagstat_file = f'{dir_mapping}/{sample}.flagstat'
     if os.path.exists(flagstat_file):
         stats = parse_flagstat(flagstat_file)
         total = stats.get('total', 0)
@@ -202,13 +217,13 @@ for sample in SAMPLES:
         rate = mapped / total if total > 0 else 0
         alignment_stats.loc[sample] = [total, mapped, rate]
 
-alignment_stats.to_csv(alignment_stats, sep='\t')
+alignment_stats.to_csv(alignment_stats_file, sep='\t')
 
 # --------------------------------------------- calculate_uvig_abundance --------------------------------------------- #
 # 输入
 cpm_table
 # 输出
-dir_uvig_abun = "05_uvig_abun"
+dir_uvig_abun = "04_uvig_abun"
 os.makedirs(dir_uvig_abun, exist_ok=True)
 uvig_abun_table = f"{dir_uvig_abun}/uvig_abun.tsv"
 
@@ -249,7 +264,7 @@ uvig_abundance.to_csv(uvig_abun_table, sep='\t')
 
 # --------------------------------------------- calculate_votu_abundance --------------------------------------------- #
 # 输入
-votu_clusters_file = "/home/shijiabin/2025_2ME/03_virus_identification/methodA/06_cluster/clusters.tsv"
+votu_clusters_file = "/home/shijiabin/2025_2ME/03_virus_identification/06_cluster/clusters.tsv"
 uvig_abun_table
 # 输出
 votu_abun_table = "votu_abun.tsv"
@@ -313,8 +328,6 @@ abundance_columns = [col for col in votu_df.columns if col != 'vOTU']
 new_column_names = {'vOTU': 'vOTU'}
 new_column_names.update({col: f'rel_abun_{col}' for col in abundance_columns})
 votu_df = votu_df.rename(columns=new_column_names)
-
-votu_df.to_csv("votu_cpm.tsv", sep='\t', index=False)
 
 # 计算每个样本的总和
 sample_sums = votu_df.set_index('vOTU').sum(axis=0)
