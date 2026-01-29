@@ -178,9 +178,32 @@ lplc  <- sapply(fit, laplace) # laplace
 cat("lplc:", lplc, "\n")
 cat("aic:", aic, "\n")
 cat("bic:", bic, "\n")
-plot(bic, type="b", xlab="Number of Dirichlet Components", ylab="Model Fit")
-lines(lplc, type="b", lty = 2)
-lines(aic, type="b", lty = 3)
+#plot(bic, type="b", xlab="Number of Dirichlet Components", ylab="Model Fit")
+#lines(lplc, type="b", lty = 2)
+#lines(aic, type="b", lty = 3)
+# 计算整体 y 轴范围
+y_min <- min(c(bic, aic, lplc))
+y_max <- max(c(bic, aic, lplc))
+
+# 作图
+plot(
+  bic,
+  type = "b",
+  xlab = "Number of Dirichlet Components",
+  ylab = "Model Fit",
+  ylim = c(y_min, y_max)
+)
+
+lines(lplc, type = "b", lty = 2)
+lines(aic,  type = "b", lty = 3)
+
+legend(
+  "topleft",
+  legend = c("BIC", "Laplace", "AIC"),
+  lty = c(1, 2, 3),
+  bty = "n"
+)
+
 # 选择哪个准则？
 # BIC: 通常在样本量较大时更受青睐，对模型复杂度惩罚更重
 # AIC: 在预测准确性方面表现较好，倾向于选择较复杂的模型
