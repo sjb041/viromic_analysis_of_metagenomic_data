@@ -15,6 +15,8 @@ centroid_distance_pcoa <- "04_bray_curtis/centroid_distance_table.png"
 mean_distance_table <- "04_bray_curtis/mean_distance_table.txt"
 # 组平均热图
 mean_distance_heatmap <- "04_bray_curtis/mean_distance_heatmap.png"
+
+dir.create("04_bray_curtis", showWarnings = FALSE)
 #######################################################################
 
 # 安装 R 包
@@ -52,15 +54,11 @@ phyloseq_rarefied_phages_visualization_1 <- readRDS(phyloseq_object_file)
 phyloseq_rarefied_phages_visualization_2 = subset_samples(phyloseq_rarefied_phages_visualization_1, !cluster == "NA")
 ###################################
 
-# 2.5.2 Transform count (log10)
+# 2.5.2 Hellinger transformation
 ###################################
-# I use a log10 transformation for the simple fact that I observed before that taxa that are less abundant or often lysogenic phages
-# These are more shared and less abundant than lytic taxa. I don't want to underepresent these so log10 transformation
-# 使用log10转换是因为观察到丰度较低的类群（通常是溶原性噬菌体）比裂解性噬菌体更共享但丰度更低，对数转换可以避免低估这些类群
-# You could also opt for other transformation (eg. Hellinger transformation is famous one givin more weight to low-abundant taxa)
-# 也可以选择其他转换方法（如Hellinger转换，对低丰度类群给予更多权重）
-phyloseq_rarefied_phages_transformed = transform_sample_counts(phyloseq_rarefied_phages_visualization_2, function(x) log(10 + x))
-#phyloseq_rarefied_phages_hellinger = transform_sample_counts(phyloseq_rarefied_phages_visualization_2, "hellinger")
+phyloseq_rarefied_phages_transformed <- phyloseq_rarefied_phages_visualization_2 %>%
+  microbiome::transform(transform = "hellinger") %>%
+  microbiome::aggregate_rare(level = "Genus", detection = 0.000001/100, prevalence = 0.000001/100)
 ###################################
 
 # 2.5.3 Bray-curtis dissimmilarities 计算 Bray-Curtis 相似性
