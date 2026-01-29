@@ -171,7 +171,7 @@ count$total <- NULL
 # Determine DMM clusters and evaluate BIC score
 # You're matrix cannot have decimals after the komma
 count <- as.matrix(count)
-fit <- lapply(1:3, dmn, count = count, verbose=TRUE) 
+fit <- lapply(1:5, dmn, count = count, verbose=TRUE) 
 bic  <- sapply(fit, BIC) # BIC 
 aic  <- sapply(fit, AIC) # AIC 
 lplc  <- sapply(fit, laplace) # laplace 
